@@ -232,10 +232,6 @@ export function ResearchComposer({
                 {t("composer.maxPapersInvalid")}
               </p>
             ) : null}
-
-            <p className="mt-4 text-xs text-[var(--color-text-subtle)]">
-              {t("composer.summary")}
-            </p>
           </details>
         </div>
       </form>

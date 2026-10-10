@@ -1,5 +1,19 @@
 import { expect, type Page } from "@playwright/test";
 
+export async function expectMenuSettled(page: Page) {
+  await expect
+    .poll(() =>
+      page
+        .getByTestId("research-menu")
+        .evaluate((element) => element.getBoundingClientRect().top),
+    )
+    .toBeCloseTo(0, 0);
+  await expect(page.locator("[data-welcome-surface]")).toHaveAttribute(
+    "data-collapsed",
+    "true",
+  );
+}
+
 export async function mockEntryBackend(page: Page, configured = true) {
   let apiKeyConfigured = configured;
   await page.route("**/api/v1/settings/deepseek", (route) => {
@@ -22,7 +36,9 @@ export async function mockEntryBackend(page: Page, configured = true) {
 }
 
 export async function expectSwissEntry(page: Page) {
-  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(
+    page.locator("h1:visible, #research-menu-title:visible").first(),
+  ).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await expect(page.locator("main")).toHaveCSS(
     "background-color",

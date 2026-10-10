@@ -1,0 +1,5 @@
+.page {
+  background: var(--color-page);
+  color: var(--color-text);
+  overflow-anchor: none;
+}

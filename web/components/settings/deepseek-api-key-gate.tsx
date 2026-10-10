@@ -1,7 +1,12 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useState, type FormEvent, type ReactNode } from "react";
+import {
+  useState,
+  type FormEvent,
+  type ReactNode,
+  type RefObject,
+} from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -21,13 +26,50 @@ import styles from "./settings-page.module.css";
 
 const DEEPSEEK_PLATFORM_URL = "https://platform.deepseek.com/";
 
-export function DeepSeekApiKeyGate({ children }: { children: ReactNode }) {
+export function DeepSeekApiKeyGate({
+  children,
+  enabled = true,
+  mode = "replace",
+  returnFocusRef,
+}: {
+  children: ReactNode;
+  enabled?: boolean;
+  mode?: "replace" | "overlay";
+  returnFocusRef?: RefObject<HTMLElement | null>;
+}) {
   const t = useTranslations("settings.deepseek");
-  const settingsQuery = useDeepSeekSettings();
+  const settingsQuery = useDeepSeekSettings({ enabled });
   const updateSettings = useUpdateDeepSeekSettings();
   const [apiKey, setApiKey] = useState("");
+  const overlay = mode === "overlay";
+  // Keep children in the same React slot while loading, gating and saving.
+  const present = (gate: ReactNode) =>
+    overlay ? (
+      <>
+        {children}
+        {gate}
+      </>
+    ) : (
+      gate
+    );
+  const block = (content: ReactNode) =>
+    present(
+      <BlockingDialog overlay={overlay} returnFocusRef={returnFocusRef}>
+        {content}
+      </BlockingDialog>,
+    );
+
+  if (!enabled) return overlay ? present(null) : children;
 
   if (settingsQuery.isPending) {
+    // Avoid a transient focus trap while checking an already configured entry.
+    // Destination routes retain their blocking gate until the query resolves.
+    if (overlay)
+      return present(
+        <span role="status" className="sr-only">
+          {t("checking")}
+        </span>,
+      );
     return (
       <main className={styles.gateLoading}>
         <p role="status">{t("checking")}</p>
@@ -36,8 +78,8 @@ export function DeepSeekApiKeyGate({ children }: { children: ReactNode }) {
   }
 
   if (settingsQuery.isError) {
-    return (
-      <BlockingDialog>
+    return block(
+      <>
         <DialogTitle>{t("unavailableTitle")}</DialogTitle>
         <DialogDescription>{t("unavailableDescription")}</DialogDescription>
         <InlineAlert tone="error" className="mt-4">
@@ -52,7 +94,7 @@ export function DeepSeekApiKeyGate({ children }: { children: ReactNode }) {
             {settingsQuery.isFetching ? t("retrying") : t("retry")}
           </Button>
         </div>
-      </BlockingDialog>
+      </>,
     );
   }
 
@@ -60,7 +102,7 @@ export function DeepSeekApiKeyGate({ children }: { children: ReactNode }) {
     !settingsQuery.data.api_key_required ||
     settingsQuery.data.api_key_configured
   ) {
-    return children;
+    return overlay ? present(null) : children;
   }
 
   async function save(event: FormEvent<HTMLFormElement>) {
@@ -73,8 +115,8 @@ export function DeepSeekApiKeyGate({ children }: { children: ReactNode }) {
     }
   }
 
-  return (
-    <BlockingDialog>
+  return block(
+    <>
       <DialogTitle>{t("setupTitle")}</DialogTitle>
       <DialogDescription>{t("setupDescription")}</DialogDescription>
       <div className={styles.gateMetadata}>
@@ -134,13 +176,21 @@ export function DeepSeekApiKeyGate({ children }: { children: ReactNode }) {
           </a>
         </div>
       </form>
-    </BlockingDialog>
+    </>,
   );
 }
 
-function BlockingDialog({ children }: { children: ReactNode }) {
+function BlockingDialog({
+  children,
+  overlay,
+  returnFocusRef,
+}: {
+  children: ReactNode;
+  overlay: boolean;
+  returnFocusRef?: RefObject<HTMLElement | null>;
+}) {
   return (
-    <div className={styles.gatePage}>
+    <div className={overlay ? undefined : styles.gatePage}>
       <Dialog open onOpenChange={() => undefined}>
         <DialogContent
           className={styles.gateDialog}
@@ -148,6 +198,14 @@ function BlockingDialog({ children }: { children: ReactNode }) {
           onEscapeKeyDown={(event) => event.preventDefault()}
           onInteractOutside={(event) => event.preventDefault()}
           onPointerDownOutside={(event) => event.preventDefault()}
+          onCloseAutoFocus={
+            overlay
+              ? (event) => {
+                  event.preventDefault();
+                  returnFocusRef?.current?.focus({ preventScroll: true });
+                }
+              : undefined
+          }
         >
           {children}
         </DialogContent>

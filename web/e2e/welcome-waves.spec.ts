@@ -1,7 +1,11 @@
 import { expect, test } from "@playwright/test";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
-import { expectSwissEntry, mockEntryBackend } from "./three-page-helpers";
+import {
+  expectSwissEntry,
+  expectMenuSettled,
+  mockEntryBackend,
+} from "./three-page-helpers";
 
 test.use({ viewport: { width: 1366, height: 768 } });
 
@@ -18,8 +22,12 @@ for (const locale of ["en", "zh-CN"] as const) {
     const waves = page.getByTestId("welcome-waves");
     await expect(waves).toHaveAttribute("data-motion", "running");
     await expect(waves).toHaveCSS("pointer-events", "none");
-    const header = (await page.locator("main header").boundingBox())!;
-    const footer = (await page.locator("main footer").boundingBox())!;
+    const header = (await page
+      .locator('[data-entry-page="welcome"] header')
+      .boundingBox())!;
+    const footer = (await page
+      .locator('[data-entry-page="welcome"] footer')
+      .boundingBox())!;
     const bounds = (await waves.boundingBox())!;
     expect(bounds).toEqual({ x: 0, y: 96, width: 1366, height: 608 });
     expect(bounds.y).toBe(header.y + header.height);
@@ -123,7 +131,7 @@ for (const locale of ["en", "zh-CN"] as const) {
     // Clear the selection and leave the page before the review screenshot.
     await paragraph.click();
     await page.mouse.move(1365, 767);
-    const directory = resolve("../artifacts/home-waves");
+    const directory = test.info().outputDir;
     mkdirSync(directory, { recursive: true });
     await page.screenshot({
       path: resolve(directory, `welcome-waves-${locale}.png`),
@@ -134,8 +142,8 @@ for (const locale of ["en", "zh-CN"] as const) {
       path: resolve(directory, `welcome-waves-pointer-${locale}.png`),
     });
     await next.click();
-    await expect(page).toHaveURL(/\/workspace$/);
-    await expect(waves).toHaveCount(0);
+    await expectMenuSettled(page);
+    await expect(waves).toHaveAttribute("data-motion", "still");
     expect(errors).toEqual([]);
   });
 }
@@ -158,20 +166,24 @@ test("reduced motion keeps static contours and a keyboard usable homepage", asyn
   await page.waitForTimeout(120);
   expect(await snapshot()).toBe(still);
   await expect(dot).toHaveAttribute("data-pointer", "hidden");
-  await expect(page.getByRole("button")).toHaveCount(2);
+  await expect(
+    page.locator('[data-entry-page="welcome"]').getByRole("button"),
+  ).toHaveCount(2);
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await expect(waves).toHaveAttribute("data-motion", "running");
   await expect.poll(snapshot).not.toBe(still);
   await page.keyboard.press("Tab");
   await expect(
-    page.getByRole("button", { name: "Languages", exact: true }),
+    page
+      .locator('[data-entry-page="welcome"]')
+      .getByRole("button", { name: "Languages", exact: true }),
   ).toBeFocused();
   await page.keyboard.press("Tab");
   await expect(
     page.getByRole("button", { name: "NEXT", exact: true }),
   ).toBeFocused();
   await page.keyboard.press("Enter");
-  await expect(page).toHaveURL(/\/en\/workspace$/);
+  await expectMenuSettled(page);
 });
 
 test("wave bounds follow desktop resizing and a live language change", async ({
@@ -182,8 +194,12 @@ test("wave bounds follow desktop resizing and a live language change", async ({
   const waves = page.getByTestId("welcome-waves");
   async function aligned() {
     const box = (await waves.boundingBox())!;
-    const header = (await page.locator("main header").boundingBox())!;
-    const footer = (await page.locator("main footer").boundingBox())!;
+    const header = (await page
+      .locator('[data-entry-page="welcome"] header')
+      .boundingBox())!;
+    const footer = (await page
+      .locator('[data-entry-page="welcome"] footer')
+      .boundingBox())!;
     return (
       box.y === header.y + header.height &&
       box.y + box.height === footer.y &&
@@ -192,7 +208,10 @@ test("wave bounds follow desktop resizing and a live language change", async ({
   }
   await page.setViewportSize({ width: 1280, height: 720 });
   await expect.poll(aligned).toBe(true);
-  await page.getByRole("button", { name: "Languages", exact: true }).click();
+  await page
+    .locator('[data-entry-page="welcome"]')
+    .getByRole("button", { name: "Languages", exact: true })
+    .click();
   await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN");
   await expect.poll(aligned).toBe(true);
   await page.setViewportSize({ width: 1366, height: 768 });

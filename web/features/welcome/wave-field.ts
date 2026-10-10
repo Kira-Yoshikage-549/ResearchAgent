@@ -303,15 +303,16 @@ export function mountWelcomeWaves(
   function resize() {
     if (disposed) return;
     const rect = host.getBoundingClientRect();
-    const changed =
-      rect.width !== bounding.width || rect.height !== bounding.height;
+    const width = host.offsetWidth || rect.width;
+    const height = host.offsetHeight || rect.height;
+    const changed = width !== bounding.width || height !== bounding.height;
     const ratio = Math.min(2, window.devicePixelRatio || 1);
     const backingChanged = changed || ratio !== pixelRatio;
     bounding = {
       left: rect.left,
       top: rect.top + window.scrollY,
-      width: rect.width,
-      height: rect.height,
+      width,
+      height,
     };
     pixelRatio = ratio;
     if (backingChanged) {
@@ -355,8 +356,13 @@ export function mountWelcomeWaves(
       leave();
       return;
     }
-    const x = event.clientX - bounding.left;
-    const y = event.clientY - bounding.top + window.scrollY;
+    const rect = host.getBoundingClientRect();
+    if (!rect.width || !rect.height) {
+      leave();
+      return;
+    }
+    const x = ((event.clientX - rect.left) * bounding.width) / rect.width;
+    const y = ((event.clientY - rect.top) * bounding.height) / rect.height;
     if (x < 0 || x >= bounding.width || y < 0 || y >= bounding.height) {
       leave();
       return;
@@ -372,17 +378,20 @@ export function mountWelcomeWaves(
   }
 
   const resizeObserver = new ResizeObserver(resize);
-  const intersectionObserver = new IntersectionObserver(([entry]) => {
-    visible = entry.isIntersecting;
-    syncMotion();
-  });
+  const intersectionObserver = new IntersectionObserver(
+    ([entry]) => {
+      visible = entry.isIntersecting && entry.intersectionRatio > 0.001;
+      syncMotion();
+    },
+    { threshold: 0.001 },
+  );
   interactionTarget.addEventListener("pointermove", move, { passive: true });
   interactionTarget.addEventListener("pointerleave", leave);
   window.addEventListener("resize", resize, { passive: true });
   document.addEventListener("visibilitychange", syncMotion);
   motion.addEventListener("change", syncMotion);
   resizeObserver.observe(host);
-  intersectionObserver.observe(host);
+  intersectionObserver.observe(interactionTarget);
   resize();
 
   return {

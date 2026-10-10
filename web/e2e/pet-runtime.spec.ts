@@ -42,10 +42,12 @@ test("legacy visible companion preferences never mount media and preserve resear
     "/en/research/new",
   ]) {
     await page.goto(route);
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(
+      page.locator("h1:visible, #research-menu-title:visible").first(),
+    ).toBeVisible();
     await expect(
       page.locator(
-        "[data-pet-state], [data-brand-media], [data-research-media], canvas, video",
+        "[data-pet-state], [data-brand-media], [data-research-media], canvas:not([data-welcome-wave-canvas]), video",
       ),
     ).toHaveCount(0);
   }

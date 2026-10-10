@@ -12,6 +12,7 @@ import { PreferencesHydrator } from "@/features/preferences/preferences-hydrator
 import { DEFAULT_LOCALE, type AppLocale } from "@/i18n/locale";
 import { getMessages } from "@/i18n/messages";
 import { usePathname } from "@/i18n/navigation";
+import { DeepSeekSetupContext } from "@/features/settings/deepseek-setup-context";
 
 export function Providers({
   children,
@@ -44,11 +45,13 @@ export function Providers({
       >
         <TooltipProvider delayDuration={300}>
           <PreferencesHydrator />
-          <EntryTransitionProvider>
-            <AppContents enforceDeepSeekSetup={enforceDeepSeekSetup}>
-              {children}
-            </AppContents>
-          </EntryTransitionProvider>
+          <DeepSeekSetupContext.Provider value={enforceDeepSeekSetup}>
+            <EntryTransitionProvider>
+              <AppContents enforceDeepSeekSetup={enforceDeepSeekSetup}>
+                {children}
+              </AppContents>
+            </EntryTransitionProvider>
+          </DeepSeekSetupContext.Provider>
         </TooltipProvider>
       </NextIntlClientProvider>
     </QueryClientProvider>
@@ -64,8 +67,9 @@ function AppContents({
 }) {
   const pathname = usePathname();
   // The localized navigation hook normally strips the locale prefix.
-  const isWelcomePage = /^\/(?:en\/?|zh-CN\/?)?$/.test(pathname);
-  if (isWelcomePage) return children;
+  const entryPath =
+    pathname.replace(/^\/(?:en|zh-CN)(?=\/|$)/, "").replace(/\/$/, "") || "/";
+  if (entryPath === "/" || entryPath === "/workspace") return children;
 
   return (
     <>

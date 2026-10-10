@@ -1,3 +1,5 @@
-import { WelcomePage } from "@/components/welcome/welcome-page";
+import { ResearchEntryPage } from "@/components/entry/research-entry-page";
 
-export default WelcomePage;
+export default function Page() {
+  return <ResearchEntryPage initialSection="welcome" />;
+}

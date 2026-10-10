@@ -19,7 +19,9 @@ test("legacy dark storage and a system dark preference remain fixed to paper on 
     "/en/settings",
   ]) {
     await page.goto(route);
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(
+      page.locator("h1:visible, #research-menu-title:visible").first(),
+    ).toBeVisible();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
     await expect(page.locator("html")).toHaveCSS("color-scheme", "light");
     await expect(page.locator("body")).toHaveCSS(

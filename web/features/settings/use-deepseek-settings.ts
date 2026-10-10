@@ -11,9 +11,12 @@ import {
 
 export const deepSeekSettingsQueryKey = ["settings", "deepseek"] as const;
 
-export function useDeepSeekSettings() {
+export function useDeepSeekSettings({
+  enabled = true,
+}: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: deepSeekSettingsQueryKey,
+    enabled,
     queryFn: async () => {
       const response = await getDeepSeekSettings();
       if (!response) throw new Error("DeepSeek settings response was empty");

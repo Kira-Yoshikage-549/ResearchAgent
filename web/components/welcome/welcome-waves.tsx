@@ -10,11 +10,13 @@ import styles from "./welcome-waves.module.css";
 export function WelcomeWaves({
   className,
   interactionRef,
+  surfaceRef = interactionRef,
   topBoundaryRef,
   bottomBoundaryRef,
 }: {
   className: string;
   interactionRef: RefObject<HTMLElement | null>;
+  surfaceRef?: RefObject<HTMLElement | null>;
   topBoundaryRef: RefObject<HTMLElement | null>;
   bottomBoundaryRef: RefObject<HTMLElement | null>;
 }) {
@@ -25,22 +27,34 @@ export function WelcomeWaves({
     const viewport = host.current;
     const surface = canvas.current;
     const page = interactionRef.current;
+    const geometry = surfaceRef.current;
     const topBoundary = topBoundaryRef.current;
     const bottomBoundary = bottomBoundaryRef.current;
-    if (!viewport || !surface || !page || !topBoundary || !bottomBoundary)
+    if (
+      !viewport ||
+      !surface ||
+      !page ||
+      !geometry ||
+      !topBoundary ||
+      !bottomBoundary
+    )
       return;
 
     const updateBounds = () => {
-      const bounds = page.getBoundingClientRect();
+      const bounds = geometry.getBoundingClientRect();
+      const layoutHeight = geometry.offsetHeight || bounds.height;
+      const scale = bounds.height / layoutHeight;
+      // Keep the original canvas geometry while the welcome surface is collapsed.
+      if (!scale || !Number.isFinite(scale)) return;
       const top = Math.max(
         0,
-        topBoundary.getBoundingClientRect().bottom - bounds.top,
+        (topBoundary.getBoundingClientRect().bottom - bounds.top) / scale,
       );
       const bottom = Math.max(
         top,
         Math.min(
-          bounds.height,
-          bottomBoundary.getBoundingClientRect().top - bounds.top,
+          layoutHeight,
+          (bottomBoundary.getBoundingClientRect().top - bounds.top) / scale,
         ),
       );
       viewport.style.top = `${top}px`;
@@ -51,13 +65,18 @@ export function WelcomeWaves({
     registerWelcomeWaves();
     viewport.startWaves(surface, page);
     const boundaries = new ResizeObserver(updateBounds);
-    for (const element of [page, topBoundary, bottomBoundary])
+    for (const element of new Set([
+      page,
+      geometry,
+      topBoundary,
+      bottomBoundary,
+    ]))
       boundaries.observe(element);
     return () => {
       boundaries.disconnect();
       viewport.stopWaves();
     };
-  }, [interactionRef, topBoundaryRef, bottomBoundaryRef]);
+  }, [interactionRef, surfaceRef, topBoundaryRef, bottomBoundaryRef]);
   return (
     <a-waves
       ref={host}

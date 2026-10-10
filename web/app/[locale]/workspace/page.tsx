@@ -1,3 +1,1 @@
-import ResearchMenuPage from "@/components/entry/research-menu-page";
-
-export default ResearchMenuPage;
+export { default } from "../../workspace/page";

@@ -221,6 +221,32 @@ describe("Canvas wave geometry, timing and lifecycle", () => {
     expect(ticker.lagSmoothing).not.toHaveBeenCalled();
   });
 
+  it("keeps canvas resolution and maps pointer coordinates through vertical compression", () => {
+    const field = mount();
+    vi.spyOn(field.host, "offsetWidth", "get").mockReturnValue(400);
+    vi.spyOn(field.host, "offsetHeight", "get").mockReturnValue(184);
+    field.bounds.mockReturnValue(new DOMRect(0, 48, 400, 92));
+    window.dispatchEvent(new Event("resize"));
+    expect(field.canvas.width).toBe(400);
+    expect(field.canvas.height).toBe(184);
+    pointer(field.host, 100, 83);
+    expect(field.x()).toBe(100);
+    expect(field.y()).toBe(70);
+    field.bounds.mockReturnValue(new DOMRect(0, 0, 400, 0));
+    pointer(field.host, 100, 0);
+    expect(field.host.dataset.pointer).toBe("hidden");
+    visibility(
+      [
+        {
+          isIntersecting: true,
+          intersectionRatio: 0,
+        } as IntersectionObserverEntry,
+      ],
+      {} as IntersectionObserver,
+    );
+    expect(frames.size).toBe(0);
+  });
+
   it("follows progressively, with exactly consistent easing across refresh rates", () => {
     function follow(hz: number) {
       clock = 0;
@@ -371,7 +397,12 @@ describe("Canvas wave geometry, timing and lifecycle", () => {
     const field = mount(target, false);
     advance(17);
     visibility(
-      [{ isIntersecting: false } as IntersectionObserverEntry],
+      [
+        {
+          isIntersecting: false,
+          intersectionRatio: 0,
+        } as IntersectionObserverEntry,
+      ],
       {} as IntersectionObserver,
     );
     const still = field.curves();
@@ -381,7 +412,12 @@ describe("Canvas wave geometry, timing and lifecycle", () => {
     expect(field.curves()).toEqual(still);
     expect(field.intro.time).toHaveBeenCalledTimes(introTime);
     visibility(
-      [{ isIntersecting: true } as IntersectionObserverEntry],
+      [
+        {
+          isIntersecting: true,
+          intersectionRatio: 1,
+        } as IntersectionObserverEntry,
+      ],
       {} as IntersectionObserver,
     );
     advance(2017);

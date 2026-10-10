@@ -1,9 +1,29 @@
+.stage {
+  position: relative;
+  min-height: 100svh;
+  overflow: clip;
+}
+
 .page {
   position: relative;
   isolation: isolate;
   min-height: 100svh;
   background: var(--color-page);
   color: var(--color-text);
+  transform-origin: 50% 0;
+  transform: translateY(var(--welcome-offset, 0px))
+    scaleY(var(--welcome-scale, 1));
+}
+
+.page[data-collapsed="true"] {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page {
+    transform: none;
+  }
 }
 
 .canvas {

@@ -15,7 +15,7 @@ for (const locale of ["en", "zh-CN"] as const) {
       if (/\/(?:brand-robot|design-text|research-robot)\//.test(request.url()))
         retiredMedia.push(request.url());
     });
-    const directory = resolve("../artifacts/swiss-style");
+    const directory = test.info().outputDir;
     mkdirSync(directory, { recursive: true });
     const prefix = locale === "en" ? "/en" : "";
     for (const [name, route] of [
@@ -34,7 +34,13 @@ for (const locale of ["en", "zh-CN"] as const) {
       await page.evaluate(() => document.fonts.ready);
       await expectSwissEntry(page);
       const grid = page
-        .locator(name === "welcome" ? "[data-entry-canvas]" : "main > div")
+        .locator(
+          name === "welcome"
+            ? "[data-entry-canvas]"
+            : name === "menu"
+              ? '[data-testid="research-menu"] > div'
+              : "main > div",
+        )
         .first();
       const bounds = await grid.boundingBox();
       expect(bounds?.x).toBe(48);
@@ -48,7 +54,9 @@ for (const locale of ["en", "zh-CN"] as const) {
       const actionBounds = await control.boundingBox();
       expect(actionBounds!.height).toBeGreaterThanOrEqual(44);
       expect(actionBounds!.y + actionBounds!.height).toBeLessThanOrEqual(768);
-      const heading = page.getByRole("heading", { level: 1 });
+      const heading = page.getByRole("heading", {
+        level: name === "menu" ? 2 : 1,
+      });
       await expect(heading).toHaveCSS(
         "font-size",
         name === "welcome" ? "144px" : "96px",

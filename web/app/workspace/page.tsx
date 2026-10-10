@@ -1,3 +1,5 @@
-import ResearchMenuPage from "@/components/entry/research-menu-page";
+import { ResearchEntryPage } from "@/components/entry/research-entry-page";
 
-export default ResearchMenuPage;
+export default function WorkspacePage() {
+  return <ResearchEntryPage initialSection="menu" />;
+}

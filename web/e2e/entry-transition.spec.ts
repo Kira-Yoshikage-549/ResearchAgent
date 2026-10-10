@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { mockEntryBackend } from "./three-page-helpers";
+import { expectMenuSettled, mockEntryBackend } from "./three-page-helpers";
 
 test.use({ viewport: { width: 1366, height: 768 } });
 
@@ -47,7 +47,7 @@ async function expectNoTransitions(page: Page) {
 }
 
 for (const locale of ["en", "zh-CN"] as const) {
-  test(`keyboard entry and menu return are immediate without a visual overlay (${locale})`, async ({
+  test(`keyboard scroll entry and direct menu return have no route overlay (${locale})`, async ({
     page,
   }) => {
     await mockEntryBackend(page);
@@ -56,7 +56,7 @@ for (const locale of ["en", "zh-CN"] as const) {
     await watchTransitions(page);
     await page.getByRole("button", { name: /NEXT|下一步/ }).focus();
     await page.keyboard.press("Enter");
-    await expect(page).toHaveURL(new RegExp(`${prefix}/workspace$`));
+    await expectMenuSettled(page);
     await expectNoTransitions(page);
     await page.getByRole("link", { name: /NEW RESEARCH|新建研究/ }).focus();
     await page.keyboard.press("Enter");
@@ -126,12 +126,12 @@ test("system reduced motion and a completed welcome keep direct navigation", asy
   await page.goto("/en");
   await watchTransitions(page);
   await page.getByRole("button", { name: "NEXT", exact: true }).click();
-  await expect(page).toHaveURL(/\/en\/workspace$/);
+  await expectMenuSettled(page);
   await page.getByRole("link", { name: /NEW RESEARCH/ }).click();
   await expect(page).toHaveURL(/\/en\/research\/new$/);
   await expectNoTransitions(page);
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.goto("/en");
-  await expect(page).toHaveURL(/\/en\/workspace$/);
+  await expectMenuSettled(page);
   await expect(page.getByTestId("entry-transition")).toHaveCount(0);
 });

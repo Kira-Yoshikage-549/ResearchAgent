@@ -6,16 +6,37 @@ vi.mock("next/navigation", () => ({
   usePathname: () => null,
   useSearchParams: () => new URLSearchParams(),
 }));
+vi.mock("gsap", () => ({ gsap: { registerPlugin: vi.fn() } }));
+vi.mock("gsap/ScrollTrigger", () => ({
+  ScrollTrigger: { create: () => ({ refresh: vi.fn(), kill: vi.fn() }) },
+}));
+vi.mock("@/components/welcome/welcome-waves", () => ({
+  WelcomeWaves: () => null,
+}));
 
 import Home from "@/app/workspace/page";
 import { Providers } from "@/app/providers";
 
 describe("home page", () => {
   afterEach(() => {
+    vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
   beforeEach(() => {
+    vi.stubGlobal("matchMedia", () => ({
+      matches: false,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }));
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        observe() {}
+        disconnect() {}
+      },
+    );
+    vi.stubGlobal("scrollTo", vi.fn());
     window.history.replaceState({}, "", "/workspace");
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(null, { status: 204 }),
@@ -30,10 +51,10 @@ describe("home page", () => {
     );
 
     expect(
-      screen.getByRole("heading", { name: "Choose your next step", level: 1 }),
+      screen.getByRole("heading", { name: "Choose your next step", level: 2 }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Every discovery begins with a question."),
+      screen.getAllByText("Every discovery begins with a question.")[1],
     ).toBeVisible();
     expect(screen.queryByRole("list")).not.toBeInTheDocument();
     for (const number of ["01", "02", "03"]) {

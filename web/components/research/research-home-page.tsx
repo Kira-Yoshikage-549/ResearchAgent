@@ -59,7 +59,6 @@ export default function ResearchHomePage() {
         <aside className={styles.tips}>
           <h2>{t("entry.questionTipsTitle")}</h2>
           <p>{t("entry.questionTipsBody")}</p>
-          <p>{t("composer.summary")}</p>
         </aside>
         <footer className={`${styles.metadata} swiss-meta`}>
           <span>{new Date().getFullYear()}</span>
