@@ -71,6 +71,10 @@
   display: block;
 }
 
+.brandTitle[data-title-render="canvas"] {
+  -webkit-text-fill-color: transparent;
+}
+
 .description {
   color: var(--color-text);
   grid-column: 10 / -1;

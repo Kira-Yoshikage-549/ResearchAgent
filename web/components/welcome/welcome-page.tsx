@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight } from "lucide-react";
+import { ArrowDown } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRef, type RefObject } from "react";
 
@@ -28,6 +28,7 @@ export function WelcomeSection({
   const composerT = useTranslations("composer");
   const headerRef = useRef<HTMLElement>(null);
   const footerRef = useRef<HTMLElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
 
   return (
     <section
@@ -50,6 +51,7 @@ export function WelcomeSection({
           surfaceRef={surfaceRef}
           topBoundaryRef={headerRef}
           bottomBoundaryRef={footerRef}
+          titleRef={titleRef}
         />
         <div className={styles.canvas} data-entry-canvas>
           <header ref={headerRef} className={styles.header}>
@@ -58,7 +60,11 @@ export function WelcomeSection({
               <EntryLanguageSwitcher onBeforeSwitch={onLanguageSwitch} />
             </div>
           </header>
-          <h1 className={styles.brandTitle} aria-label="Research Agent">
+          <h1
+            ref={titleRef}
+            className={styles.brandTitle}
+            aria-label="Research Agent"
+          >
             <span>Research</span>
             <span>Agent</span>
           </h1>
@@ -73,7 +79,7 @@ export function WelcomeSection({
             onClick={onEnter}
           >
             {t("next")}
-            <ArrowRight aria-hidden="true" size={20} />
+            <ArrowDown aria-hidden="true" size={20} />
           </button>
           <footer ref={footerRef} className={`${styles.metadata} swiss-meta`}>
             <span>{new Date().getFullYear()}</span>

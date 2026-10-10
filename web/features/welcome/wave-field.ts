@@ -2,6 +2,7 @@
 // Canvas rendering and time-normalized simulation: docs/frontend-swiss/home-waves.md
 import { gsap } from "gsap";
 import { Noise } from "noisejs";
+import { createWaveTitle } from "./wave-title";
 
 type Point = {
   x: number;
@@ -28,6 +29,7 @@ export function mountWelcomeWaves(
   host: HTMLElement,
   canvas: HTMLCanvasElement,
   interactionTarget: HTMLElement = host,
+  titleElement?: HTMLElement,
 ) {
   const context = canvas.getContext("2d");
   if (!context) {
@@ -63,6 +65,12 @@ export function mountWelcomeWaves(
   let introTime = 0;
   let intro: gsap.core.Timeline | null = null;
   let resolution: MediaQueryList | null = null;
+  const title = titleElement
+    ? createWaveTitle(host, titleElement, (rebuild) => {
+        if (rebuild) resize();
+        else if (!running) drawLines();
+      })
+    : null;
 
   function drawCursor() {
     host.style.setProperty("--x", `${mouse.sx}px`);
@@ -108,6 +116,17 @@ export function mountWelcomeWaves(
       if (!interactive) continue;
       const radius = Math.max(175, mouse.speed);
       const radiusSquared = radius * radius;
+      const forceAt = (x: number, y: number) => {
+        const distance = Math.hypot(x - mouse.sx, y - mouse.sy);
+        return mouse.active && distance < radius
+          ? (Math.cos(distance * 0.001) *
+              (1 - distance / radius) *
+              radius *
+              mouse.speed *
+              0.00065) /
+              spring
+          : 0;
+      };
       for (const { points } of lines) {
         for (const point of points) {
           let force = 0;
@@ -136,6 +155,7 @@ export function mountWelcomeWaves(
           point.cursor.vy = c * y + d * vy - c * directionY * force;
         }
       }
+      title?.advance({ a, b, c, d, forceAt, directionX, directionY });
     }
   }
 
@@ -200,6 +220,7 @@ export function mountWelcomeWaves(
       // Independent subpaths preserve each polyline without a giant raster path.
       ctx.stroke();
     }
+    title?.draw(ctx, running && !motion.matches);
   }
 
   function reveal() {
@@ -276,6 +297,7 @@ export function mountWelcomeWaves(
     host.dataset.motion = nextRunning ? "running" : "still";
     if (nextRunning && !running) {
       running = true;
+      title?.rebuild(pixelRatio);
       lastTimestamp = performance.now();
       if (!interactive && !intro) startIntro();
       frame = requestAnimationFrame(tick);
@@ -283,6 +305,7 @@ export function mountWelcomeWaves(
       if (frame !== null) cancelAnimationFrame(frame);
       frame = null;
       running = false;
+      title?.reset();
       leave();
       if (!disposed && motion.matches) {
         finishIntro();
@@ -346,12 +369,14 @@ export function mountWelcomeWaves(
       else if (running && !motion.matches) startIntro();
     }
     watchResolution();
+    title?.rebuild(pixelRatio);
     updateNoise();
     drawLines();
     syncMotion();
   }
 
   function move(event: PointerEvent) {
+    title?.setTouch(event.pointerType === "touch");
     if (event.pointerType === "touch" || !running) {
       leave();
       return;
@@ -401,6 +426,7 @@ export function mountWelcomeWaves(
       syncMotion();
       intro?.kill();
       intro = null;
+      title?.dispose();
       resizeObserver.disconnect();
       intersectionObserver.disconnect();
       resolution?.removeEventListener("change", resize);

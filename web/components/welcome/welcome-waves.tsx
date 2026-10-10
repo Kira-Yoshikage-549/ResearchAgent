@@ -13,12 +13,14 @@ export function WelcomeWaves({
   surfaceRef = interactionRef,
   topBoundaryRef,
   bottomBoundaryRef,
+  titleRef,
 }: {
   className: string;
   interactionRef: RefObject<HTMLElement | null>;
   surfaceRef?: RefObject<HTMLElement | null>;
   topBoundaryRef: RefObject<HTMLElement | null>;
   bottomBoundaryRef: RefObject<HTMLElement | null>;
+  titleRef?: RefObject<HTMLHeadingElement | null>;
 }) {
   const host = useRef<WelcomeWaveElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -63,7 +65,7 @@ export function WelcomeWaves({
 
     updateBounds();
     registerWelcomeWaves();
-    viewport.startWaves(surface, page);
+    viewport.startWaves(surface, page, titleRef?.current ?? undefined);
     const boundaries = new ResizeObserver(updateBounds);
     for (const element of new Set([
       page,
@@ -76,7 +78,7 @@ export function WelcomeWaves({
       boundaries.disconnect();
       viewport.stopWaves();
     };
-  }, [interactionRef, surfaceRef, topBoundaryRef, bottomBoundaryRef]);
+  }, [interactionRef, surfaceRef, topBoundaryRef, bottomBoundaryRef, titleRef]);
   return (
     <a-waves
       ref={host}

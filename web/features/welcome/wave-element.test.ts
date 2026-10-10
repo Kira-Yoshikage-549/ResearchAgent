@@ -6,6 +6,25 @@ const { mount, dispose } = vi.hoisted(() => ({
 vi.mock("./wave-field", () => ({ mountWelcomeWaves: mount }));
 import { registerWelcomeWaves, type WelcomeWaveElement } from "./wave-element";
 
+it("retains the title reference when the element reconnects", () => {
+  mount.mockReturnValue({ dispose });
+  registerWelcomeWaves();
+  const page = document.createElement("main");
+  const title = document.createElement("h1");
+  const element = document.createElement("a-waves") as WelcomeWaveElement;
+  const canvas = document.createElement("canvas");
+  element.append(canvas);
+  page.append(title, element);
+  document.body.append(page);
+  element.startWaves(canvas, page, title);
+  expect(mount).toHaveBeenCalledExactlyOnceWith(element, canvas, page, title);
+  element.remove();
+  expect(dispose).toHaveBeenCalledOnce();
+  page.append(element);
+  expect(mount).toHaveBeenLastCalledWith(element, canvas, page, title);
+  expect(mount).toHaveBeenCalledTimes(2);
+});
+
 afterEach(() => {
   document.body.replaceChildren();
   vi.clearAllMocks();
