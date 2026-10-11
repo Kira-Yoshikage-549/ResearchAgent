@@ -1,3 +1,76 @@
 .content {
   display: contents;
 }
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  overflow: clip;
+  touch-action: none;
+  cursor: progress;
+}
+
+.sheet {
+  position: absolute;
+  inset: 0;
+  background: var(--color-page);
+  transform: translateX(100%);
+  will-change: transform;
+}
+
+.center {
+  position: absolute;
+  inset: 0;
+  display: block;
+  align-content: center;
+  padding: 48px;
+  color: var(--color-text);
+  font-family: var(--font-ui);
+  font-size: 144px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  text-align: center;
+  visibility: hidden;
+}
+
+.overlay[data-phase="center-in"] .center,
+.overlay[data-phase="holding"] .center,
+.overlay[data-phase="center-out"] .center {
+  visibility: visible;
+}
+
+.wordMask {
+  display: inline-block;
+  vertical-align: top;
+  clip-path: inset(-0.12em -0.05em);
+}
+
+.word {
+  display: inline-block;
+}
+
+.center .word,
+.title[data-entry-title-active="true"] .word {
+  transform: translateY(115%);
+  will-change: transform;
+}
+
+.title[data-entry-title-active="true"] {
+  position: relative;
+  z-index: 101;
+  visibility: hidden;
+}
+
+.title[data-entry-title-phase="title-in"],
+.title[data-entry-title-phase="uncovering"] {
+  visibility: visible;
+}
+
+@media (max-width: 900px) {
+  .center {
+    padding: 24px;
+    font-size: clamp(48px, 10.5vw, 144px);
+  }
+}

@@ -13,5 +13,10 @@
   "researchOptions": "示例与研究参数",
   "location": "本地",
   "questionTipsTitle": "从明确的问题开始。",
-  "questionTipsBody": "说明研究主题、需要比较的对象，以及时间范围。可参考示例问题，或在开始前调整来源。"
+  "questionTipsBody": "说明研究主题、需要比较的对象，以及时间范围。可参考示例问题，或在开始前调整来源。",
+  "transition": {
+    "newResearch": "新建研究",
+    "history": "历史记录",
+    "settings": "设置"
+  }
 }

@@ -9,6 +9,7 @@ import {
 } from "react";
 
 import { Button } from "@/components/ui/button";
+import { useEntryTransitionBlock } from "@/components/entry/entry-transition-provider";
 import {
   Dialog,
   DialogContent,
@@ -42,6 +43,15 @@ export function DeepSeekApiKeyGate({
   const updateSettings = useUpdateDeepSeekSettings();
   const [apiKey, setApiKey] = useState("");
   const overlay = mode === "overlay";
+  useEntryTransitionBlock(
+    enabled &&
+      !settingsQuery.isPending &&
+      (settingsQuery.isError ||
+        Boolean(
+          settingsQuery.data?.api_key_required &&
+          !settingsQuery.data.api_key_configured,
+        )),
+  );
   // Keep children in the same React slot while loading, gating and saving.
   const present = (gate: ReactNode) =>
     overlay ? (

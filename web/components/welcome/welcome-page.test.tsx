@@ -11,13 +11,19 @@ import { NextIntlClientProvider } from "next-intl";
 import { StrictMode, type PropsWithChildren } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { replace, scrollTo, createTrigger, kill } = vi.hoisted(() => ({
-  replace: vi.fn(),
-  scrollTo: vi.fn(),
-  createTrigger: vi.fn(),
-  kill: vi.fn(),
+const { replace, scrollTo, animateScroll, createTrigger, kill } = vi.hoisted(
+  () => ({
+    replace: vi.fn(),
+    scrollTo: vi.fn(),
+    animateScroll: vi.fn(),
+    createTrigger: vi.fn(),
+    kill: vi.fn(),
+  }),
+);
+vi.mock("gsap", () => ({
+  gsap: { registerPlugin: vi.fn(), to: animateScroll },
 }));
-vi.mock("gsap", () => ({ gsap: { registerPlugin: vi.fn() } }));
+vi.mock("gsap/ScrollToPlugin", () => ({ ScrollToPlugin: {} }));
 vi.mock("gsap/ScrollTrigger", () => ({
   ScrollTrigger: { create: createTrigger },
 }));
@@ -76,6 +82,7 @@ describe("continuous research entry", () => {
   beforeEach(() => {
     sessionStorage.clear();
     vi.clearAllMocks();
+    animateScroll.mockReturnValue({ kill });
     createTrigger.mockReturnValue({ refresh: vi.fn(), kill });
     vi.stubGlobal("matchMedia", () => ({
       matches: false,
@@ -152,9 +159,15 @@ describe("continuous research entry", () => {
     const menu = screen.getByTestId("research-menu");
     fireEvent.click(screen.getByRole("button", { name: "NEXT" }));
     expect(sessionStorage.getItem(WELCOME_SESSION_KEY)).toBe("complete");
-    expect(scrollTo).toHaveBeenLastCalledWith({ top: 768, behavior: "smooth" });
+    expect(animateScroll).toHaveBeenLastCalledWith(
+      window,
+      expect.objectContaining({
+        scrollTo: expect.objectContaining({ y: 768 }),
+      }),
+    );
     expect(replace).not.toHaveBeenCalled();
     expect(screen.getByTestId("research-menu")).toBe(menu);
+    act(() => window.scrollTo({ top: 768, behavior: "instant" }));
     await waitFor(() =>
       expect(screen.getByRole("heading", { level: 2 })).toHaveFocus(),
     );
@@ -179,9 +192,14 @@ describe("continuous research entry", () => {
     fireEvent.click(screen.getByRole("button", { name: "Research Agent" }));
     expect(scrollTo).toHaveBeenLastCalledWith({ top: 0, behavior: "smooth" });
     fireEvent.click(screen.getByRole("button", { name: "NEXT" }));
-    expect(scrollTo).toHaveBeenLastCalledWith({ top: 768, behavior: "smooth" });
+    expect(animateScroll).toHaveBeenLastCalledWith(
+      window,
+      expect.objectContaining({
+        scrollTo: expect.objectContaining({ y: 768 }),
+      }),
+    );
   });
-  it("preserves partial squeeze position across a language remount", () => {
+  it("preserves partial darkening and parallax across a language remount", () => {
     const view = render(entry());
     act(() => window.scrollTo({ top: 400 }));
     fireEvent.click(
@@ -199,16 +217,26 @@ describe("continuous research entry", () => {
     });
     expect(sessionStorage.getItem(ENTRY_LOCALE_POSITION_KEY)).toBeNull();
     expect(screen.getByText("你的 AI 科研伙伴")).toBeInTheDocument();
+    const surface = document.querySelector<HTMLElement>(
+      "[data-welcome-surface]",
+    )!;
+    expect(surface.style.getPropertyValue("--welcome-offset")).toBe("80px");
     expect(
-      document.querySelector("[data-welcome-surface]")?.getAttribute("style"),
-    ).toContain("--welcome-scale: 0.479");
+      Number(surface.style.getPropertyValue("--welcome-opacity")),
+    ).toBeCloseTo(1 - (400 / 768) * 1.25);
+    expect(surface.dataset.darkened).toBe("false");
   });
   it("supports keyboard entry and reverse navigation", async () => {
     const user = userEvent.setup();
     render(entry());
     screen.getByRole("button", { name: "NEXT" }).focus();
     await user.keyboard("{Enter}");
-    expect(scrollTo).toHaveBeenLastCalledWith({ top: 768, behavior: "smooth" });
+    expect(animateScroll).toHaveBeenLastCalledWith(
+      window,
+      expect.objectContaining({
+        scrollTo: expect.objectContaining({ y: 768 }),
+      }),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Research Agent" }));
     expect(scrollTo).toHaveBeenLastCalledWith({ top: 0, behavior: "smooth" });
   });

@@ -16,6 +16,7 @@ import {
   usePreferencesStore,
 } from "@/features/preferences/preferences-store";
 
+import { EntryTransitionTitle } from "@/components/entry/entry-transition-title";
 import styles from "./settings-page.module.css";
 
 const settingsSchema = z.object({
@@ -73,7 +74,9 @@ export function SettingsPage() {
     <WorkspacePage>
       <div className={styles.page}>
         <header className={styles.pageHeader}>
-          <h1 className={styles.pageTitle}>{t("title")}</h1>
+          <EntryTransitionTitle className={styles.pageTitle}>
+            {t("title")}
+          </EntryTransitionTitle>
           <p className={styles.pageDescription}>{t("description")}</p>
         </header>
 

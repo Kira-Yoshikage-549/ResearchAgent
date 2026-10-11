@@ -9,15 +9,33 @@ const { mount, dispose } = vi.hoisted(() => ({
 vi.mock("@/features/welcome/wave-field", () => ({ mountWelcomeWaves: mount }));
 import { WelcomeWaves } from "./welcome-waves";
 
+let frames: Map<number, FrameRequestCallback>;
 beforeEach(() => {
-  mount.mockReset().mockReturnValue({ dispose });
+  mount.mockReset().mockReturnValue({ dispose, setSuspended() {} });
   dispose.mockReset();
+  frames = new Map();
+  let id = 0;
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+    frames.set(++id, callback);
+    return id;
+  });
+  vi.stubGlobal("cancelAnimationFrame", (frame: number) =>
+    frames.delete(frame),
+  );
 });
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
+
+function advance() {
+  act(() => {
+    const callbacks = [...frames.values()];
+    frames.clear();
+    callbacks.forEach((callback) => callback(16));
+  });
+}
 
 it("initializes after the parent page and sibling divider refs are attached", () => {
   vi.stubGlobal(
@@ -55,6 +73,8 @@ it("initializes after the parent page and sibling divider refs are attached", ()
   const waves = screen.getByTestId("welcome-waves");
   expect(waves.style.top).toBe("96px");
   expect(waves.style.height).toBe("608px");
+  expect(mount).not.toHaveBeenCalled();
+  advance();
   expect(mount).toHaveBeenCalledOnce();
   expect(mount.mock.calls[0][2]).toBe(waves.parentElement);
 });
@@ -96,6 +116,7 @@ it("tracks divider layout changes and releases its observer on unmount", () => {
   const waves = screen.getByTestId("welcome-waves");
   expect(waves.style.top).toBe("96px");
   expect(waves.style.height).toBe("608px");
+  advance();
   expect(mount).toHaveBeenCalledWith(
     waves,
     waves.querySelector("canvas"),

@@ -30,13 +30,14 @@ export function mountWelcomeWaves(
   canvas: HTMLCanvasElement,
   interactionTarget: HTMLElement = host,
   titleElement?: HTMLElement,
+  descriptionElement?: HTMLElement,
 ) {
   const context = canvas.getContext("2d");
   if (!context) {
     host.dataset.motion = "still";
     host.dataset.pointer = "hidden";
     host.dataset.intro = "complete";
-    return { dispose() {} };
+    return { dispose() {}, setSuspended() {} };
   }
   const ctx = context;
   const noise = new Noise(Math.random());
@@ -58,19 +59,33 @@ export function mountWelcomeWaves(
   let pixelRatio = 1;
   let visible = true;
   let disposed = false;
+  let suspended = false;
   let running = false;
   let interactive = false;
   let frame: number | null = null;
+  let resizeFrame: number | null = null;
   let lastTimestamp = 0;
   let introTime = 0;
   let intro: gsap.core.Timeline | null = null;
   let resolution: MediaQueryList | null = null;
-  const title = titleElement
-    ? createWaveTitle(host, titleElement, (rebuild) => {
-        if (rebuild) resize();
-        else if (!running) drawLines();
-      })
-    : null;
+  const textLayers = [titleElement, descriptionElement].flatMap(
+    (element, index) =>
+      element
+        ? [
+            createWaveTitle(
+              host,
+              element,
+              (rebuild) => {
+                if (rebuild) scheduleResize();
+                else if (!running) drawLines();
+              },
+              index === 1
+                ? { maxDisplacement: 3, strength: 0.04, meshSpacing: 12 }
+                : undefined,
+            ),
+          ]
+        : [],
+  );
 
   function drawCursor() {
     host.style.setProperty("--x", `${mouse.sx}px`);
@@ -155,7 +170,8 @@ export function mountWelcomeWaves(
           point.cursor.vy = c * y + d * vy - c * directionY * force;
         }
       }
-      title?.advance({ a, b, c, d, forceAt, directionX, directionY });
+      for (const text of textLayers)
+        text.advance({ a, b, c, d, forceAt, directionX, directionY });
     }
   }
 
@@ -220,7 +236,7 @@ export function mountWelcomeWaves(
       // Independent subpaths preserve each polyline without a giant raster path.
       ctx.stroke();
     }
-    title?.draw(ctx, running && !motion.matches);
+    for (const text of textLayers) text.draw(ctx, running && !motion.matches);
   }
 
   function reveal() {
@@ -289,6 +305,7 @@ export function mountWelcomeWaves(
   function syncMotion() {
     const nextRunning =
       !disposed &&
+      !suspended &&
       !motion.matches &&
       !document.hidden &&
       visible &&
@@ -297,7 +314,7 @@ export function mountWelcomeWaves(
     host.dataset.motion = nextRunning ? "running" : "still";
     if (nextRunning && !running) {
       running = true;
-      title?.rebuild(pixelRatio);
+      for (const text of textLayers) text.rebuild(pixelRatio);
       lastTimestamp = performance.now();
       if (!interactive && !intro) startIntro();
       frame = requestAnimationFrame(tick);
@@ -305,9 +322,9 @@ export function mountWelcomeWaves(
       if (frame !== null) cancelAnimationFrame(frame);
       frame = null;
       running = false;
-      title?.reset();
+      for (const text of textLayers) text.reset();
       leave();
-      if (!disposed && motion.matches) {
+      if (!disposed && !suspended && visible && motion.matches) {
         finishIntro();
         updateNoise();
         drawLines();
@@ -369,14 +386,22 @@ export function mountWelcomeWaves(
       else if (running && !motion.matches) startIntro();
     }
     watchResolution();
-    title?.rebuild(pixelRatio);
+    for (const text of textLayers) text.rebuild(pixelRatio);
     updateNoise();
     drawLines();
     syncMotion();
   }
 
+  function scheduleResize() {
+    if (disposed || resizeFrame !== null) return;
+    resizeFrame = requestAnimationFrame(() => {
+      resizeFrame = null;
+      resize();
+    });
+  }
+
   function move(event: PointerEvent) {
-    title?.setTouch(event.pointerType === "touch");
+    for (const text of textLayers) text.setTouch(event.pointerType === "touch");
     if (event.pointerType === "touch" || !running) {
       leave();
       return;
@@ -402,7 +427,7 @@ export function mountWelcomeWaves(
     }
   }
 
-  const resizeObserver = new ResizeObserver(resize);
+  const resizeObserver = new ResizeObserver(scheduleResize);
   const intersectionObserver = new IntersectionObserver(
     ([entry]) => {
       visible = entry.isIntersecting && entry.intersectionRatio > 0.001;
@@ -420,13 +445,20 @@ export function mountWelcomeWaves(
   resize();
 
   return {
+    setSuspended(value: boolean) {
+      if (suspended === value) return;
+      suspended = value;
+      syncMotion();
+    },
     dispose() {
       if (disposed) return;
       disposed = true;
+      if (resizeFrame !== null) cancelAnimationFrame(resizeFrame);
+      resizeFrame = null;
       syncMotion();
       intro?.kill();
       intro = null;
-      title?.dispose();
+      for (const text of textLayers) text.dispose();
       resizeObserver.disconnect();
       intersectionObserver.disconnect();
       resolution?.removeEventListener("change", resize);

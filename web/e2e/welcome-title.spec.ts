@@ -37,9 +37,6 @@ for (const locale of ["en", "zh-CN"] as const) {
     page,
   }) => {
     await mockEntryBackend(page);
-    await page.addInitScript(() => {
-      Math.random = () => 0.5;
-    });
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
     await page.goto(locale === "en" ? "/en" : "/");

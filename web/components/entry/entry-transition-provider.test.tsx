@@ -2,23 +2,61 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
 import { getMessages } from "@/i18n/messages";
-import { mockViewTransitions } from "@/test-shims/view-transition";
+import { usePathname } from "@/i18n/navigation";
 import { EntryTransitionLink } from "./entry-transition-link";
+import { EntryTransitionTitle } from "./entry-transition-title";
 import {
   EntryTransitionProvider,
   useEntryNavigation,
+  useEntryTransitionBlock,
 } from "./entry-transition-provider";
 
-let native: ReturnType<typeof mockViewTransitions>;
+const animation = vi.hoisted(() => ({
+  pending: [] as {
+    complete: () => void;
+    kill: ReturnType<typeof vi.fn>;
+    duration: number;
+  }[],
+}));
+vi.mock("gsap", () => ({
+  gsap: {
+    registerPlugin: vi.fn(),
+    set: vi.fn(),
+    to: vi.fn(
+      (
+        _target: unknown,
+        vars: { onComplete: () => void; duration: number },
+      ) => {
+        const tween = {
+          complete: vars.onComplete,
+          kill: vi.fn(),
+          duration: vars.duration,
+        };
+        animation.pending.push(tween);
+        return tween;
+      },
+    ),
+  },
+}));
+vi.mock("gsap/CustomEase", () => ({
+  CustomEase: { create: () => (value: number) => value },
+}));
 
-function Controls() {
+function Controls({
+  showTitle = true,
+  blocked = false,
+}: {
+  showTitle?: boolean;
+  blocked?: boolean;
+}) {
   const { navigate, busy } = useEntryNavigation();
+  const pathname = usePathname();
+  useEntryTransitionBlock(blocked);
   return (
     <>
-      <button onClick={() => void navigate("/workspace", { replace: true })}>
-        NEXT
+      <button onClick={() => void navigate("/history", { replace: true })}>
+        Replace history
       </button>
       <EntryTransitionLink href="/research/new">
         New research
@@ -26,167 +64,267 @@ function Controls() {
       <EntryTransitionLink href="/workspace" direction="backward">
         Back to menu
       </EntryTransitionLink>
+      <EntryTransitionLink href="/history">History</EntryTransitionLink>
+      <EntryTransitionLink href="/settings">Settings</EntryTransitionLink>
+      {showTitle ? (
+        <EntryTransitionTitle>
+          {pathname.includes("history")
+            ? "Research history"
+            : pathname.includes("settings")
+              ? "Settings"
+              : pathname.includes("new")
+                ? "NEW RESEARCH"
+                : "Choose your next step"}
+        </EntryTransitionTitle>
+      ) : null}
       <output>{busy ? "Pending navigation" : "Ready"}</output>
     </>
   );
 }
 
-function renderNavigation(locale: "en" | "zh-CN" = "en") {
-  return render(
+function tree(locale: "en" | "zh-CN" = "en", options = {}) {
+  return (
     <StrictMode>
       <NextIntlClientProvider locale={locale} messages={getMessages(locale)}>
         <EntryTransitionProvider>
-          <Controls />
+          <Controls {...options} />
         </EntryTransitionProvider>
       </NextIntlClientProvider>
-    </StrictMode>,
+    </StrictMode>
   );
 }
 
-async function advance(ms: number) {
+async function complete() {
+  const tween = animation.pending.shift();
+  expect(tween).toBeDefined();
   await act(async () => {
-    await vi.advanceTimersByTimeAsync(ms);
+    tween!.complete();
   });
+}
+async function finishAnimation() {
+  for (let i = 0; i < 6; i++) await complete();
+}
+function phase() {
+  return screen.getByTestId("entry-transition").getAttribute("data-phase");
 }
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-  window.history.replaceState({}, "", "/");
-  native = mockViewTransitions();
+  window.history.replaceState({}, "", "/workspace");
+  animation.pending = [];
   vi.stubGlobal("matchMedia", undefined);
 });
-
 afterEach(() => {
-  native.restore();
   vi.useRealTimers();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 
-describe("immediate entry navigation", () => {
-  it("dispatches replace immediately and deduplicates simultaneous input without an overlay", async () => {
-    const replace = vi.spyOn(window.history, "replaceState");
-    renderNavigation();
-    fireEvent.click(screen.getByText("NEXT"));
-    fireEvent.click(screen.getByText("NEXT"));
-    expect(replace).toHaveBeenCalledTimes(1);
-    expect(window.location.pathname).toBe("/workspace");
-    expect(native.start).not.toHaveBeenCalled();
+describe("masked entry navigation", () => {
+  it("covers before dispatch, blocks repeated input and reveals the actual heading before uncovering", async () => {
+    const push = vi.spyOn(window.history, "pushState");
+    render(tree());
+    fireEvent.click(screen.getByRole("link", { name: "New research" }));
+    fireEvent.click(screen.getByRole("link", { name: "Settings" }));
+    expect(push).not.toHaveBeenCalled();
+    expect(phase()).toBe("covering");
+    expect(
+      screen.getByText("Pending navigation").closest("[inert]"),
+    ).not.toBeNull();
+    expect(animation.pending[0].duration).toBe(1);
+    await complete();
+    expect(push).toHaveBeenCalledTimes(1);
+    expect(window.location.pathname).toBe("/research/new");
+    expect(phase()).toBe("center-in");
+    expect(screen.getByTestId("entry-transition-center").textContent).toBe(
+      "New Research",
+    );
+    await complete();
+    expect(phase()).toBe("holding");
+    await complete();
+    expect(phase()).toBe("center-out");
+    await complete();
+    expect(phase()).toBe("title-in");
+    const title = screen.getByRole("heading", {
+      name: "NEW RESEARCH",
+      hidden: true,
+    });
+    expect(title).toHaveAttribute("data-entry-title-phase", "title-in");
+    await complete();
+    expect(phase()).toBe("uncovering");
+    await complete();
     expect(screen.queryByTestId("entry-transition")).not.toBeInTheDocument();
-    expect(screen.getByText("NEXT").closest("[inert]")).toBeNull();
-    await advance(0);
-    expect(screen.getByText("Ready")).toBeInTheDocument();
+    expect(screen.getByText("Ready").closest("[inert]")).toBeNull();
+    expect(title).toHaveFocus();
   });
 
-  it.each(["/workspace", "/en/workspace", "/zh-CN/workspace"])(
-    "recognizes %s and immediately pushes the question route",
+  it.each([
+    "/",
+    "/workspace",
+    "/en/workspace",
+    "/zh-CN/workspace",
+    "/history",
+    "/settings",
+    "/research/new",
+  ])(
+    "animates entry links from %s including the embedded menu",
     async (source) => {
       window.history.replaceState({}, "", source);
-      const push = vi.spyOn(window.history, "pushState");
-      renderNavigation(source.includes("zh-CN") ? "zh-CN" : "en");
-      fireEvent.click(screen.getByText("New research"));
-      fireEvent.click(screen.getByText("New research"));
-      expect(push).toHaveBeenCalledTimes(1);
-      expect(window.location.pathname).toBe("/research/new");
-      expect(native.start).not.toHaveBeenCalled();
-      await advance(0);
+      render(tree(source.includes("zh-CN") ? "zh-CN" : "en"));
+      fireEvent.click(screen.getByRole("button", { name: "Replace history" }));
+      if (source === "/history") {
+        expect(
+          screen.queryByTestId("entry-transition"),
+        ).not.toBeInTheDocument();
+        return;
+      }
+      expect(window.location.pathname).toBe(source);
+      await finishAnimation();
+      expect(window.location.pathname).toBe("/history");
       expect(screen.getByText("Ready")).toBeInTheDocument();
     },
   );
 
-  it("returns to the menu immediately", async () => {
-    window.history.replaceState({}, "", "/research/new");
-    renderNavigation();
-    fireEvent.click(screen.getByText("Back to menu"));
-    expect(window.location.pathname).toBe("/workspace");
-    expect(native.start).not.toHaveBeenCalled();
-    await advance(0);
-    expect(screen.getByText("Ready")).toBeInTheDocument();
-  });
-
-  it("keeps a pending route locked and permits retry after five seconds", async () => {
-    const replace = vi
-      .spyOn(window.history, "replaceState")
-      .mockImplementation(() => {});
-    renderNavigation();
-    fireEvent.click(screen.getByText("NEXT"));
-    fireEvent.click(screen.getByText("NEXT"));
-    expect(replace).toHaveBeenCalledTimes(1);
-    expect(screen.getByText("Pending navigation")).toBeInTheDocument();
-    await advance(4999);
-    expect(screen.getByText("Pending navigation")).toBeInTheDocument();
-    await advance(1);
-    expect(screen.getByText("Ready")).toBeInTheDocument();
-    fireEvent.click(screen.getByText("NEXT"));
-    expect(replace).toHaveBeenCalledTimes(2);
-  });
-
-  it("releases the page when router dispatch throws", async () => {
-    const replace = vi
-      .spyOn(window.history, "replaceState")
-      .mockImplementation(() => {
-        throw new Error("Router unavailable");
-      });
-    renderNavigation();
-    fireEvent.click(screen.getByText("NEXT"));
-    await advance(0);
-    expect(screen.getByText("Ready")).toBeInTheDocument();
-    fireEvent.click(screen.getByText("NEXT"));
-    expect(replace).toHaveBeenCalledTimes(2);
-  });
-
-  it("preserves modified link clicks", () => {
-    window.history.replaceState({}, "", "/workspace");
-    const push = vi.spyOn(window.history, "pushState");
-    renderNavigation();
-    fireEvent.click(screen.getByText("New research"), { ctrlKey: true });
-    expect(push).not.toHaveBeenCalled();
-    expect(native.start).not.toHaveBeenCalled();
-  });
-
-  it("releases pending navigation when browser history supersedes it", async () => {
-    vi.spyOn(window.history, "replaceState").mockImplementation(() => {});
-    renderNavigation();
-    fireEvent.click(screen.getByText("NEXT"));
-    act(() => {
-      window.history.pushState({}, "", "/history");
-      window.dispatchEvent(new PopStateEvent("popstate"));
+  it("waits for a real destination heading and releases a stalled destination after five seconds", async () => {
+    render(tree("en", { showTitle: false }));
+    fireEvent.click(screen.getByRole("link", { name: "New research" }));
+    await complete();
+    await complete();
+    await complete();
+    expect(phase()).toBe("holding");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(4999);
     });
-    await advance(0);
-    expect(window.location.pathname).toBe("/history");
+    expect(phase()).toBe("holding");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
+    });
     expect(screen.getByText("Ready")).toBeInTheDocument();
+    expect(screen.queryByTestId("entry-transition")).not.toBeInTheDocument();
   });
 
-  it("clears pending navigation timers on unmount", async () => {
-    const replace = vi
-      .spyOn(window.history, "replaceState")
-      .mockImplementation(() => {});
-    const view = renderNavigation();
-    fireEvent.click(screen.getByText("NEXT"));
-    view.unmount();
-    await advance(6000);
-    expect(replace).toHaveBeenCalledTimes(1);
+  it("continues when a delayed destination heading mounts", async () => {
+    const view = render(tree("en", { showTitle: false }));
+    fireEvent.click(screen.getByRole("link", { name: "New research" }));
+    await complete();
+    await complete();
+    await complete();
+    expect(phase()).toBe("holding");
+    await act(async () => {
+      view.rerender(tree());
+    });
+    expect(phase()).toBe("center-out");
+    await complete();
+    await complete();
+    await complete();
+    expect(screen.getByText("Ready")).toBeInTheDocument();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
     expect(vi.getTimerCount()).toBe(0);
   });
 
-  it("cancels an old pending navigation when the interface locale changes", async () => {
-    const replace = vi
-      .spyOn(window.history, "replaceState")
-      .mockImplementation(() => {});
-    const view = renderNavigation();
-    fireEvent.click(screen.getByText("NEXT"));
-    view.rerender(
-      <StrictMode>
-        <NextIntlClientProvider locale="zh-CN" messages={getMessages("zh-CN")}>
-          <EntryTransitionProvider>
-            <Controls />
-          </EntryTransitionProvider>
-        </NextIntlClientProvider>
-      </StrictMode>,
-    );
-    await advance(0);
+  it("restores controls when dispatch throws", async () => {
+    vi.spyOn(window.history, "pushState").mockImplementation(() => {
+      throw new Error("Unavailable");
+    });
+    render(tree());
+    fireEvent.click(screen.getByRole("link", { name: "New research" }));
+    await complete();
     expect(screen.getByText("Ready")).toBeInTheDocument();
-    fireEvent.click(screen.getByText("NEXT"));
-    expect(replace).toHaveBeenCalledTimes(2);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("cancels a running mask on browser history and prevents a late dispatch", async () => {
+    render(tree());
+    fireEvent.click(screen.getByRole("link", { name: "New research" }));
+    const cover = animation.pending[0];
+    act(() => {
+      window.history.pushState({}, "", "/settings");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+    await act(async () => {
+      cover.complete();
+    });
+    expect(cover.kill).toHaveBeenCalled();
+    expect(window.location.pathname).toBe("/settings");
+    expect(screen.getByText("Ready")).toBeInTheDocument();
+  });
+
+  it("cancels a running mask for a language change or configuration block", async () => {
+    const view = render(tree());
+    fireEvent.click(screen.getByRole("link", { name: "New research" }));
+    view.rerender(tree("zh-CN"));
+    expect(screen.getByText("Ready")).toBeInTheDocument();
+    animation.pending = [];
+    fireEvent.click(screen.getByRole("link", { name: "New research" }));
+    await complete();
+    view.rerender(tree("zh-CN", { blocked: true }));
+    expect(screen.queryByTestId("entry-transition")).not.toBeInTheDocument();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("keeps reduced motion direct", () => {
+    vi.stubGlobal("matchMedia", () => ({ matches: true }));
+    render(tree());
+    fireEvent.click(screen.getByRole("link", { name: "New research" }));
+    expect(window.location.pathname).toBe("/research/new");
+    expect(screen.queryByTestId("entry-transition")).not.toBeInTheDocument();
+  });
+
+  it("navigates directly from a research task outside the entry group", () => {
+    window.history.replaceState({}, "", "/research/existing-task");
+    render(tree());
+    fireEvent.click(screen.getByRole("link", { name: "Back to menu" }));
+    expect(window.location.pathname).toBe("/workspace");
+    expect(screen.queryByTestId("entry-transition")).not.toBeInTheDocument();
+  });
+
+  it("preserves modified clicks and ignores the current page", () => {
+    render(tree());
+    const push = vi.spyOn(window.history, "pushState");
+    fireEvent.click(screen.getByRole("link", { name: "New research" }), {
+      ctrlKey: true,
+    });
+    fireEvent.click(screen.getByRole("link", { name: "Back to menu" }));
+    expect(push).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("entry-transition")).not.toBeInTheDocument();
+  });
+
+  it("blocks wheel and keyboard input only while animating", async () => {
+    render(tree());
+    fireEvent.click(screen.getByRole("link", { name: "New research" }));
+    expect(
+      fireEvent(window, new WheelEvent("wheel", { cancelable: true })),
+    ).toBe(false);
+    expect(
+      fireEvent(
+        window,
+        new KeyboardEvent("keydown", { key: "Enter", cancelable: true }),
+      ),
+    ).toBe(false);
+    await finishAnimation();
+    expect(
+      fireEvent(window, new WheelEvent("wheel", { cancelable: true })),
+    ).toBe(true);
+    expect(
+      fireEvent(
+        window,
+        new KeyboardEvent("keydown", { key: "Enter", cancelable: true }),
+      ),
+    ).toBe(true);
+  });
+
+  it("kills pending work and clears the readiness timer on unmount", async () => {
+    const view = render(tree("en", { showTitle: false }));
+    fireEvent.click(screen.getByRole("link", { name: "New research" }));
+    await complete();
+    const tween = animation.pending[0];
+    view.unmount();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(6000);
+    });
+    expect(tween.kill).toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

@@ -91,6 +91,23 @@ describe("title spring readability and recovery", () => {
     expect(point).toEqual(vertex());
   });
 
+  it("keeps body text within its smaller displacement limit and recovers", () => {
+    const point = vertex();
+    const diagonal = {
+      ...step,
+      directionX: Math.SQRT1_2,
+      directionY: Math.SQRT1_2,
+    };
+    for (let frame = 0; frame < 180; frame++) {
+      advanceTitleVertex(point, diagonal, 150, 3);
+      expect(Math.hypot(point.x, point.y)).toBeLessThanOrEqual(3.00000001);
+    }
+    expect(Math.hypot(point.x, point.y)).toBeGreaterThan(1);
+    for (let frame = 0; frame < 600; frame++)
+      advanceTitleVertex(point, step, 0, 3);
+    expect(point).toEqual(vertex());
+  });
+
   it("handles immediate reversals without invalid coordinates and then settles", () => {
     const point = vertex();
     for (let frame = 0; frame < 100; frame++) {

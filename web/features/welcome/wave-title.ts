@@ -1,9 +1,6 @@
 // The title shares the wave field's clock, pointer and spring matrix.
-const meshSpacing = 24;
 const padding = 2;
-const limit = 8;
 const feather = 36;
-const clearance = limit + 4;
 
 export type TitleVertex = {
   u: number;
@@ -39,10 +36,38 @@ type Word = {
   tiles: Tile[];
 };
 
+// Read browser line breaks without inserting spans or changing selectable text.
+// Grapheme ranges preserve CJK, punctuation and combining characters.
+function textLines(element: Element) {
+  const lines: { text: string; rect: DOMRect }[] = [];
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+  const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+  const range = document.createRange();
+  while (walker.nextNode()) {
+    const node = walker.currentNode;
+    for (const { segment, index } of segmenter.segment(
+      node.textContent || "",
+    )) {
+      range.setStart(node, index);
+      range.setEnd(node, index + segment.length);
+      const rect = range.getBoundingClientRect();
+      if (!rect.height) continue;
+      const previous = lines.at(-1);
+      if (previous && Math.abs(previous.rect.top - rect.top) < 1) {
+        previous.text += segment;
+      } else if (segment.trim()) {
+        lines.push({ text: segment, rect });
+      }
+    }
+  }
+  return lines.map((line) => ({ ...line, text: line.text.trimEnd() }));
+}
+
 export function advanceTitleVertex(
   vertex: TitleVertex,
   step: TitleSpringStep,
   force: number,
+  limit = 8,
 ) {
   const { x, y, vx, vy } = vertex;
   vertex.x = Math.max(
@@ -83,7 +108,9 @@ export function createWaveTitle(
   host: HTMLElement,
   title: HTMLElement,
   invalidate: (rebuild?: boolean) => void,
+  { maxDisplacement = 8, strength = 0.08, meshSpacing = 24 } = {},
 ) {
+  const clearance = maxDisplacement + 4;
   let words: Word[] = [];
   let mask: HTMLCanvasElement | null = null;
   let maskLeft = 0;
@@ -92,12 +119,14 @@ export function createWaveTitle(
   let selected = false;
   let touch = false;
   let disposed = false;
+  let layoutKey: string | null = null;
 
   function native() {
     if (title.dataset.titleRender !== "native")
       title.dataset.titleRender = "native";
   }
   function release() {
+    layoutKey = null;
     for (const word of words) word.bitmap.width = word.bitmap.height = 0;
     if (mask) mask.width = mask.height = 0;
     mask = null;
@@ -111,128 +140,162 @@ export function createWaveTitle(
   }
 
   function rebuild(pixelRatio: number) {
-    release();
-    if (disposed || document.fonts.status !== "loaded") return;
-    ratio = pixelRatio;
+    if (disposed) return;
+    if (document.fonts.status !== "loaded") return release();
     const bounds = host.getBoundingClientRect();
     const scaleX = bounds.width / (host.offsetWidth || bounds.width);
     const scaleY = bounds.height / (host.offsetHeight || bounds.height);
-    if (!scaleX || !scaleY) return;
-    const style = getComputedStyle(title);
-    const font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
-    // Unused fallback faces must not block the Latin brand on the English page.
-    if (
-      !document.fonts.check(
-        `${style.fontWeight} ${style.fontSize} ${style.fontFamily.split(",")[0]}`,
-        title.textContent || "",
-      )
-    )
-      return;
-    for (const span of title.querySelectorAll("span")) {
-      const text = span.textContent || "";
-      const bitmap = document.createElement("canvas");
-      const ctx = bitmap.getContext("2d");
-      if (!ctx || !("letterSpacing" in ctx)) {
+    if (!scaleX || !scaleY) return release();
+    const spans = Array.from(title.querySelectorAll("span, p"), (span) => ({
+      span,
+      style: getComputedStyle(span),
+      rect: span.getBoundingClientRect(),
+    }));
+    const nextKey = JSON.stringify([
+      pixelRatio,
+      ...spans.map(({ span, style, rect }) => [
+        span.textContent,
+        style.fontWeight,
+        style.fontSize,
+        style.fontFamily,
+        style.letterSpacing,
+        style.fontKerning,
+        style.textRendering,
+        style.color,
+        ((rect.left - bounds.left) / scaleX).toFixed(3),
+        ((rect.top - bounds.top) / scaleY).toFixed(3),
+        (rect.width / scaleX).toFixed(3),
+        (rect.height / scaleY).toFixed(3),
+      ]),
+    ]);
+    if (layoutKey === nextKey) return;
+    release();
+    ratio = pixelRatio;
+    for (const { span, style } of spans) {
+      const font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+      // Unused fallback faces must not block the Latin brand on the English page.
+      if (
+        !document.fonts.check(
+          `${style.fontWeight} ${style.fontSize} ${style.fontFamily.split(",")[0]}`,
+          span.textContent || "",
+        )
+      ) {
         release();
         return;
       }
-      const configure = () => {
-        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-        ctx.font = font;
-        ctx.letterSpacing =
-          style.letterSpacing === "normal" ? "0px" : style.letterSpacing;
-        ctx.fontKerning = style.fontKerning as CanvasFontKerning;
-        ctx.textRendering = style.textRendering as CanvasTextRendering;
-        ctx.fillStyle = style.color;
-      };
-      configure();
-      const metrics = ctx.measureText(text);
-      if (!Number.isFinite(metrics.fontBoundingBoxAscent)) {
-        release();
-        return;
-      }
-      const range = document.createRange();
-      range.selectNodeContents(span);
-      const rect = range.getBoundingClientRect();
-      if (!rect.width || !rect.height) {
-        release();
-        return;
-      }
-      const width =
-        Math.ceil(
-          metrics.actualBoundingBoxLeft + metrics.actualBoundingBoxRight,
-        ) +
-        padding * 2;
-      const height =
-        Math.ceil(
-          metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent,
-        ) +
-        padding * 2;
-      const left =
-        (rect.left - bounds.left) / scaleX -
-        metrics.actualBoundingBoxLeft -
-        padding;
-      const top =
-        (rect.top - bounds.top) / scaleY +
-        metrics.fontBoundingBoxAscent -
-        metrics.actualBoundingBoxAscent -
-        padding;
-      bitmap.width = Math.ceil(width * ratio);
-      bitmap.height = Math.ceil(height * ratio);
-      configure();
-      ctx.fillText(
-        text,
-        padding + metrics.actualBoundingBoxLeft,
-        padding + metrics.actualBoundingBoxAscent,
-      );
-      const pixels = ctx.getImageData(0, 0, bitmap.width, bitmap.height).data;
-      const columns = Math.ceil(width / meshSpacing);
-      const rows = Math.ceil(height / meshSpacing);
-      const vertices = Array.from(
-        { length: (columns + 1) * (rows + 1) },
-        (_, index) => ({
-          u: Math.min(width, (index % (columns + 1)) * meshSpacing),
-          v: Math.min(height, Math.floor(index / (columns + 1)) * meshSpacing),
-          x: 0,
-          y: 0,
-          vx: 0,
-          vy: 0,
-        }),
-      );
-      const tiles: Tile[] = [];
-      for (let row = 0; row < rows; row++)
-        for (let column = 0; column < columns; column++) {
-          const x = column * meshSpacing,
-            y = row * meshSpacing;
-          const w = Math.min(meshSpacing, width - x),
-            h = Math.min(meshSpacing, height - y);
-          let occupied = false;
-          for (
-            let py = Math.floor(y * ratio);
-            py < Math.ceil((y + h) * ratio) && !occupied;
-            py++
-          )
-            for (
-              let px = Math.floor(x * ratio);
-              px < Math.ceil((x + w) * ratio);
-              px++
-            )
-              if (pixels[(py * bitmap.width + px) * 4 + 3]) {
-                occupied = true;
-                break;
-              }
-          if (occupied) {
-            const a = row * (columns + 1) + column;
-            tiles.push({
-              left: x,
-              top: y,
-              width: w,
-              height: h,
-              indices: [a, a + 1, a + columns + 2, a + columns + 1],
-            });
-          }
+      for (const { text, rect } of textLines(span)) {
+        const bitmap = document.createElement("canvas");
+        const ctx = bitmap.getContext("2d");
+        if (!ctx || !("letterSpacing" in ctx)) {
+          release();
+          return;
         }
-      words.push({ bitmap, left, top, width, height, vertices, tiles });
+        const configure = () => {
+          ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+          ctx.font = font;
+          ctx.letterSpacing =
+            style.letterSpacing === "normal" ? "0px" : style.letterSpacing;
+          ctx.fontKerning = style.fontKerning as CanvasFontKerning;
+          ctx.textRendering = style.textRendering as CanvasTextRendering;
+          ctx.fillStyle = style.color;
+        };
+        configure();
+        const metrics = ctx.measureText(text);
+        if (!Number.isFinite(metrics.fontBoundingBoxAscent)) {
+          release();
+          return;
+        }
+        if (!rect.width || !rect.height) {
+          release();
+          return;
+        }
+        const inkLeft =
+          (rect.left - bounds.left) / scaleX -
+          metrics.actualBoundingBoxLeft -
+          padding;
+        const inkTop =
+          (rect.top - bounds.top) / scaleY +
+          metrics.fontBoundingBoxAscent -
+          metrics.actualBoundingBoxAscent -
+          padding;
+        // Rasterize the DOM's fractional origin into a pixel-aligned cache.
+        // Drawing an integer bitmap at a half-pixel origin would blur small copy twice.
+        const left = Math.floor(inkLeft * ratio) / ratio;
+        const top = Math.floor(inkTop * ratio) / ratio;
+        const offsetX = inkLeft - left;
+        const offsetY = inkTop - top;
+        const width = Math.ceil(
+          metrics.actualBoundingBoxLeft +
+            metrics.actualBoundingBoxRight +
+            padding * 2 +
+            offsetX,
+        );
+        const height = Math.ceil(
+          metrics.actualBoundingBoxAscent +
+            metrics.actualBoundingBoxDescent +
+            padding * 2 +
+            offsetY,
+        );
+        bitmap.width = Math.ceil(width * ratio);
+        bitmap.height = Math.ceil(height * ratio);
+        configure();
+        ctx.fillText(
+          text,
+          padding + metrics.actualBoundingBoxLeft + offsetX,
+          padding + metrics.actualBoundingBoxAscent + offsetY,
+        );
+        const pixels = ctx.getImageData(0, 0, bitmap.width, bitmap.height).data;
+        const columns = Math.ceil(width / meshSpacing);
+        const rows = Math.ceil(height / meshSpacing);
+        const vertices = Array.from(
+          { length: (columns + 1) * (rows + 1) },
+          (_, index) => ({
+            u: Math.min(width, (index % (columns + 1)) * meshSpacing),
+            v: Math.min(
+              height,
+              Math.floor(index / (columns + 1)) * meshSpacing,
+            ),
+            x: 0,
+            y: 0,
+            vx: 0,
+            vy: 0,
+          }),
+        );
+        const tiles: Tile[] = [];
+        for (let row = 0; row < rows; row++)
+          for (let column = 0; column < columns; column++) {
+            const x = column * meshSpacing,
+              y = row * meshSpacing;
+            const w = Math.min(meshSpacing, width - x),
+              h = Math.min(meshSpacing, height - y);
+            let occupied = false;
+            for (
+              let py = Math.floor(y * ratio);
+              py < Math.ceil((y + h) * ratio) && !occupied;
+              py++
+            )
+              for (
+                let px = Math.floor(x * ratio);
+                px < Math.ceil((x + w) * ratio);
+                px++
+              )
+                if (pixels[(py * bitmap.width + px) * 4 + 3]) {
+                  occupied = true;
+                  break;
+                }
+            if (occupied) {
+              const a = row * (columns + 1) + column;
+              tiles.push({
+                left: x,
+                top: y,
+                width: w,
+                height: h,
+                indices: [a, a + 1, a + columns + 2, a + columns + 1],
+              });
+            }
+          }
+        words.push({ bitmap, left, top, width, height, vertices, tiles });
+      }
     }
     if (!words.length) return;
     maskLeft = Math.floor(
@@ -284,6 +347,7 @@ export function createWaveTitle(
         );
       }
     ctx.putImageData(image, 0, 0);
+    layoutKey = nextKey;
   }
 
   function advance(step: TitleSpringStep) {
@@ -292,8 +356,9 @@ export function createWaveTitle(
         const force =
           selected || touch
             ? 0
-            : step.forceAt(word.left + vertex.u, word.top + vertex.v) * 0.08;
-        advanceTitleVertex(vertex, step, force);
+            : step.forceAt(word.left + vertex.u, word.top + vertex.v) *
+              strength;
+        advanceTitleVertex(vertex, step, force, maxDisplacement);
       }
   }
 
@@ -429,12 +494,16 @@ export function createWaveTitle(
     invalidate();
   }
   const fontsChanged = () => {
-    if (!disposed) invalidate(true);
+    if (!disposed) {
+      layoutKey = null;
+      invalidate(true);
+    }
   };
   document.addEventListener("selectionchange", selection);
   document.fonts.addEventListener("loadingdone", fontsChanged);
   document.fonts.addEventListener("loadingerror", fontsChanged);
-  void document.fonts.ready.then(fontsChanged);
+  if (document.fonts.status !== "loaded")
+    void document.fonts.ready.then(fontsChanged);
   return {
     rebuild,
     advance,

@@ -11,17 +11,30 @@ it("retains the title reference when the element reconnects", () => {
   registerWelcomeWaves();
   const page = document.createElement("main");
   const title = document.createElement("h1");
+  const description = document.createElement("aside");
   const element = document.createElement("a-waves") as WelcomeWaveElement;
   const canvas = document.createElement("canvas");
   element.append(canvas);
   page.append(title, element);
   document.body.append(page);
-  element.startWaves(canvas, page, title);
-  expect(mount).toHaveBeenCalledExactlyOnceWith(element, canvas, page, title);
+  element.startWaves(canvas, page, title, description);
+  expect(mount).toHaveBeenCalledExactlyOnceWith(
+    element,
+    canvas,
+    page,
+    title,
+    description,
+  );
   element.remove();
   expect(dispose).toHaveBeenCalledOnce();
   page.append(element);
-  expect(mount).toHaveBeenLastCalledWith(element, canvas, page, title);
+  expect(mount).toHaveBeenLastCalledWith(
+    element,
+    canvas,
+    page,
+    title,
+    description,
+  );
   expect(mount).toHaveBeenCalledTimes(2);
 });
 

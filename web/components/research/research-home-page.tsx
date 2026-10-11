@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 
 import { EntryLanguageSwitcher } from "@/components/entry/entry-language-switcher";
 import { EntryTransitionLink } from "@/components/entry/entry-transition-link";
+import { EntryTransitionTitle } from "@/components/entry/entry-transition-title";
 
 import {
   ResearchComposer,
@@ -83,7 +84,9 @@ function ActiveTaskSummary({
   const taskT = useTranslations("task");
   return (
     <section className={styles.active}>
-      <h1 className={styles.activeTitle}>{task.title}</h1>
+      <EntryTransitionTitle className={styles.activeTitle}>
+        {task.title}
+      </EntryTransitionTitle>
       <p className={styles.activeQuery}>{task.query}</p>
       <p className={styles.activeStatus}>
         {t("task.activeResearch")} · {taskT("statusLabel")}:{" "}

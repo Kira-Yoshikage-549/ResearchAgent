@@ -13,5 +13,10 @@
   "researchOptions": "Examples & research options",
   "location": "LOCAL",
   "questionTipsTitle": "A precise question.\nA stronger result.",
-  "questionTipsBody": "Name your topic, the comparison you need, and any time limits. Use the examples or adjust sources before starting."
+  "questionTipsBody": "Name your topic, the comparison you need, and any time limits. Use the examples or adjust sources before starting.",
+  "transition": {
+    "newResearch": "New Research",
+    "history": "History",
+    "settings": "Settings"
+  }
 }

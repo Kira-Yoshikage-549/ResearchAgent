@@ -19,6 +19,7 @@ import {
 } from "@/features/preferences/preferences-store";
 import { Link } from "@/i18n/navigation";
 
+import { EntryTransitionTitle } from "@/components/entry/entry-transition-title";
 import styles from "./research-entry.module.css";
 
 const sourceSchema = z.enum(ACADEMIC_SOURCES);
@@ -138,9 +139,9 @@ export function ResearchComposer({
 
   return (
     <section className={styles.composer} aria-labelledby="new-research-title">
-      <h1 id="new-research-title" className={styles.title}>
+      <EntryTransitionTitle id="new-research-title" className={styles.title}>
         {t("entry.questionTitle")}
-      </h1>
+      </EntryTransitionTitle>
       <p className={styles.prompt}>{t("entry.questionPrompt")}</p>
 
       {submitError && conflictTaskId ? (

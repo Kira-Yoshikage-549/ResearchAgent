@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import type { RefObject } from "react";
 import { EntryLanguageSwitcher } from "@/components/entry/entry-language-switcher";
 import { EntryTransitionLink } from "@/components/entry/entry-transition-link";
-import { Link } from "@/i18n/navigation";
+import { EntryTransitionTitle } from "./entry-transition-title";
 import styles from "./research-menu-page.module.css";
 
 export function ResearchMenuSection({
@@ -36,14 +36,15 @@ export function ResearchMenuSection({
             <EntryLanguageSwitcher onBeforeSwitch={onLanguageSwitch} />
           </div>
         </header>
-        <h2
+        <EntryTransitionTitle
+          as="h2"
           id="research-menu-title"
           ref={headingRef}
           tabIndex={-1}
           className={styles.title}
         >
           {t("menuTitle")}
-        </h2>
+        </EntryTransitionTitle>
         <section className={styles.content} aria-label={t("menuTitle")}>
           <div className={styles.description}>
             <p>{t("partner")}</p>
@@ -63,7 +64,11 @@ export function ResearchMenuSection({
                 <ArrowRight aria-hidden="true" size={24} />
               </span>
             </EntryTransitionLink>
-            <Link href="/history" className={styles.action} data-entry-action>
+            <EntryTransitionLink
+              href="/history"
+              className={styles.action}
+              data-entry-action
+            >
               <span className={styles.actionContent}>
                 <span className={styles.number} aria-hidden="true">
                   02
@@ -71,8 +76,12 @@ export function ResearchMenuSection({
                 <span className={styles.label}>{t("history")}</span>
                 <ArrowRight aria-hidden="true" size={24} />
               </span>
-            </Link>
-            <Link href="/settings" className={styles.action} data-entry-action>
+            </EntryTransitionLink>
+            <EntryTransitionLink
+              href="/settings"
+              className={styles.action}
+              data-entry-action
+            >
               <span className={styles.actionContent}>
                 <span className={styles.number} aria-hidden="true">
                   03
@@ -80,7 +89,7 @@ export function ResearchMenuSection({
                 <span className={styles.label}>{t("settings")}</span>
                 <ArrowRight aria-hidden="true" size={24} />
               </span>
-            </Link>
+            </EntryTransitionLink>
           </nav>
         </section>
         <footer className={`${styles.metadata} swiss-meta`}>

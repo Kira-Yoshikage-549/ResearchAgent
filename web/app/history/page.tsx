@@ -11,7 +11,8 @@ import {
   useHistory,
   useRenameTask,
 } from "@/features/history/hooks/use-history";
-import { Link } from "@/i18n/navigation";
+import { EntryTransitionLink } from "@/components/entry/entry-transition-link";
+import { EntryTransitionTitle } from "@/components/entry/entry-transition-title";
 
 import styles from "@/components/history/history.module.css";
 
@@ -30,11 +31,16 @@ export default function HistoryPage() {
       <div className={styles.page}>
         <header className={styles.intro}>
           <div className={styles.introContent}>
-            <h1 className={styles.title}>{t("history.title")}</h1>
+            <EntryTransitionTitle className={styles.title}>
+              {t("history.title")}
+            </EntryTransitionTitle>
             <p className={styles.description}>{t("history.description")}</p>
-            <Link href="/research/new" className={styles.createLink}>
+            <EntryTransitionLink
+              href="/research/new"
+              className={styles.createLink}
+            >
               {t("navigation.newResearch")}
-            </Link>
+            </EntryTransitionLink>
           </div>
         </header>
         <div className={styles.content}>
@@ -76,9 +82,12 @@ export default function HistoryPage() {
             <section className={styles.emptyState}>
               <h2>{t("history.emptyTitle")}</h2>
               <p>{t("history.emptyDescription")}</p>
-              <Link href="/research/new" className={styles.emptyLink}>
+              <EntryTransitionLink
+                href="/research/new"
+                className={styles.emptyLink}
+              >
                 {t("history.createFirst")}
-              </Link>
+              </EntryTransitionLink>
             </section>
           ) : null}
           {!history.isPending && !history.isError && tasks.length ? (

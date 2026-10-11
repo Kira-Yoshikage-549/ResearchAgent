@@ -221,15 +221,15 @@ describe("Canvas wave geometry, timing and lifecycle", () => {
     expect(ticker.lagSmoothing).not.toHaveBeenCalled();
   });
 
-  it("keeps canvas resolution and maps pointer coordinates through vertical compression", () => {
+  it("keeps canvas resolution and maps pointer coordinates through scrolling parallax", () => {
     const field = mount();
     vi.spyOn(field.host, "offsetWidth", "get").mockReturnValue(400);
     vi.spyOn(field.host, "offsetHeight", "get").mockReturnValue(184);
-    field.bounds.mockReturnValue(new DOMRect(0, 48, 400, 92));
+    field.bounds.mockReturnValue(new DOMRect(0, -48, 400, 184));
     window.dispatchEvent(new Event("resize"));
     expect(field.canvas.width).toBe(400);
     expect(field.canvas.height).toBe(184);
-    pointer(field.host, 100, 83);
+    pointer(field.host, 100, 22);
     expect(field.x()).toBe(100);
     expect(field.y()).toBe(70);
     field.bounds.mockReturnValue(new DOMRect(0, 0, 400, 0));
@@ -439,6 +439,24 @@ describe("Canvas wave geometry, timing and lifecycle", () => {
     expect(intersectionDisconnect).toHaveBeenCalledOnce();
     expect(field.canvas.width).toBe(0);
     expect(remove).toHaveBeenCalledWith("pointermove", expect.any(Function));
+  });
+
+  it("pauses for a page mask and resumes the same field without restarting the entrance", () => {
+    const field = mount(undefined, false);
+    advance(17);
+    field.field.setSuspended(true);
+    const still = field.curves();
+    const introTime = field.intro.time.mock.calls.length;
+    advance(2000);
+    expect(frames.size).toBe(0);
+    expect(field.host.dataset.motion).toBe("still");
+    expect(field.curves()).toEqual(still);
+    expect(field.intro.time).toHaveBeenCalledTimes(introTime);
+    field.field.setSuspended(false);
+    advance(2017);
+    expect(field.host.dataset.motion).toBe("running");
+    expect(frames.size).toBe(1);
+    expect(intros).toHaveLength(1);
   });
 
   it("rebuilds after layout resizing and updates capped DPR without restarting motion", () => {

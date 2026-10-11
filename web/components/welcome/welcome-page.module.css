@@ -2,6 +2,7 @@
   position: relative;
   min-height: 100svh;
   overflow: clip;
+  background: var(--color-text);
 }
 
 .page {
@@ -10,9 +11,13 @@
   min-height: 100svh;
   background: var(--color-page);
   color: var(--color-text);
-  transform-origin: 50% 0;
-  transform: translateY(var(--welcome-offset, 0px))
-    scaleY(var(--welcome-scale, 1));
+  transform: translateY(var(--welcome-offset, 0px));
+  /* Approved entry motion: fade the complete paper surface into black. */
+  opacity: var(--welcome-opacity, 1);
+}
+
+.page[data-darkened="true"] {
+  pointer-events: none;
 }
 
 .page[data-collapsed="true"] {
@@ -23,6 +28,7 @@
 @media (prefers-reduced-motion: reduce) {
   .page {
     transform: none;
+    opacity: 1;
   }
 }
 
@@ -71,7 +77,8 @@
   display: block;
 }
 
-.brandTitle[data-title-render="canvas"] {
+.brandTitle[data-title-render="canvas"],
+.description[data-title-render="canvas"] {
   -webkit-text-fill-color: transparent;
 }
 

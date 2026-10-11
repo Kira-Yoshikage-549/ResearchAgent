@@ -29,6 +29,7 @@ export function WelcomeSection({
   const headerRef = useRef<HTMLElement>(null);
   const footerRef = useRef<HTMLElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
+  const descriptionRef = useRef<HTMLElement>(null);
 
   return (
     <section
@@ -52,6 +53,7 @@ export function WelcomeSection({
           topBoundaryRef={headerRef}
           bottomBoundaryRef={footerRef}
           titleRef={titleRef}
+          descriptionRef={descriptionRef}
         />
         <div className={styles.canvas} data-entry-canvas>
           <header ref={headerRef} className={styles.header}>
@@ -68,7 +70,7 @@ export function WelcomeSection({
             <span>Research</span>
             <span>Agent</span>
           </h1>
-          <aside className={styles.description}>
+          <aside ref={descriptionRef} className={styles.description}>
             <p>{composerT("description")}</p>
             <p>{entryT("tagline")}</p>
           </aside>

@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 
 import { EntryTransitionLink } from "@/components/entry/entry-transition-link";
 import { LanguageSwitcher } from "@/components/shell/language-switcher";
-import { Link, usePathname } from "@/i18n/navigation";
+import { usePathname } from "@/i18n/navigation";
 import { cn } from "@/lib/utils/cn";
 
 import styles from "./workspace-page.module.css";
@@ -35,18 +35,18 @@ export function WorkspacePage({
           {t("entry.backToMenu")}
         </EntryTransitionLink>
         <div className={styles.links}>
-          <Link
+          <EntryTransitionLink
             href="/history"
             aria-current={pathname === "/history" ? "page" : undefined}
           >
             {t("navigation.history")}
-          </Link>
-          <Link
+          </EntryTransitionLink>
+          <EntryTransitionLink
             href="/settings"
             aria-current={pathname === "/settings" ? "page" : undefined}
           >
             {t("settings.title")}
-          </Link>
+          </EntryTransitionLink>
         </div>
         <div className={styles.preferences}>
           <LanguageSwitcher />
