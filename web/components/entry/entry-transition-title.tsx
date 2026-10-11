@@ -15,12 +15,15 @@ import {
   normalizeEntryPath,
 } from "./entry-transition-provider";
 import { EntryTransitionWords } from "./entry-transition-words";
+import { MenuCharacterSwap } from "./menu-character-swap";
 import styles from "./entry-transition.module.css";
 
 type Props = Omit<ComponentProps<"h1">, "children" | "ref"> & {
   as?: "h1" | "h2";
   children: string;
   ref?: Ref<HTMLHeadingElement>;
+  idleCharacterSwap?: boolean;
+  claimEntranceCharacterSwap?: () => boolean;
 };
 
 export function EntryTransitionTitle({
@@ -28,6 +31,8 @@ export function EntryTransitionTitle({
   children,
   className,
   ref,
+  idleCharacterSwap = false,
+  claimEntranceCharacterSwap,
   ...props
 }: Props) {
   const context = useContext(EntryTransitionContext);
@@ -61,6 +66,13 @@ export function EntryTransitionTitle({
         <span aria-hidden="true">
           <EntryTransitionWords text={children} locale={locale} />
         </span>
+      ) : idleCharacterSwap ? (
+        <MenuCharacterSwap
+          text={children}
+          locale={locale}
+          enabled={!context?.busy}
+          claimEntranceSwap={claimEntranceCharacterSwap}
+        />
       ) : (
         children
       )}

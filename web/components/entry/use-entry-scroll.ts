@@ -46,9 +46,16 @@ export function useEntryScroll({
   const locale = useLocale();
   const pathname = usePathname();
   const initialized = useRef(false);
+  const firstMenuEntrance = useRef(false);
   const focusDestination = useRef<EntrySection | null>(null);
   const scrollTween = useRef<gsap.core.Tween | null>(null);
   const [menuReady, setMenuReady] = useState(false);
+
+  const claimMenuEntranceSwap = useCallback(() => {
+    const available = firstMenuEntrance.current;
+    firstMenuEntrance.current = false;
+    return available;
+  }, []);
 
   const cancelSectionScroll = useCallback(() => {
     scrollTween.current?.kill();
@@ -169,7 +176,11 @@ export function useEntryScroll({
     };
 
     let restoreY: number | undefined;
+    let firstVisit = initialSection === "welcome";
     try {
+      const menuVisited =
+        sessionStorage.getItem(WELCOME_SESSION_KEY) === "complete";
+      if (menuVisited) firstVisit = false;
       const saved = sessionStorage.getItem(ENTRY_LOCALE_POSITION_KEY);
       if (saved) {
         const position = JSON.parse(saved);
@@ -186,8 +197,7 @@ export function useEntryScroll({
       if (
         restoreY === undefined &&
         !initialized.current &&
-        (initialSection === "menu" ||
-          sessionStorage.getItem(WELCOME_SESSION_KEY) === "complete")
+        (initialSection === "menu" || menuVisited)
       ) {
         restoreY = menu.offsetTop;
       }
@@ -195,6 +205,9 @@ export function useEntryScroll({
       if (!initialized.current && initialSection === "menu")
         restoreY = menu.offsetTop;
     }
+    if (!initialized.current)
+      firstMenuEntrance.current =
+        firstVisit && (restoreY === undefined || restoreY < menu.offsetTop);
     initialized.current = true;
     if (restoreY !== undefined)
       window.scrollTo({ top: restoreY, behavior: "instant" });
@@ -282,5 +295,10 @@ export function useEntryScroll({
     nextRef,
   ]);
 
-  return { menuReady, scrollToSection, preserveLocalePosition };
+  return {
+    menuReady,
+    claimMenuEntranceSwap,
+    scrollToSection,
+    preserveLocalePosition,
+  };
 }

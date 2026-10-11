@@ -19,16 +19,19 @@ export function ResearchEntryPage({
   const menuHeadingRef = useRef<HTMLHeadingElement>(null);
   const nextRef = useRef<HTMLButtonElement>(null);
   const enforceSetup = useContext(DeepSeekSetupContext);
-  const { menuReady, scrollToSection, preserveLocalePosition } = useEntryScroll(
-    {
-      initialSection,
-      welcomeRef,
-      surfaceRef,
-      menuRef,
-      menuHeadingRef,
-      nextRef,
-    },
-  );
+  const {
+    menuReady,
+    claimMenuEntranceSwap,
+    scrollToSection,
+    preserveLocalePosition,
+  } = useEntryScroll({
+    initialSection,
+    welcomeRef,
+    surfaceRef,
+    menuRef,
+    menuHeadingRef,
+    nextRef,
+  });
   const content = (
     <main className={styles.page} data-testid="research-entry">
       <WelcomeSection
@@ -44,6 +47,8 @@ export function ResearchEntryPage({
         headingRef={menuHeadingRef}
         onBack={() => scrollToSection("welcome")}
         onLanguageSwitch={preserveLocalePosition}
+        titleAnimationEnabled={menuReady}
+        claimEntranceCharacterSwap={claimMenuEntranceSwap}
       />
     </main>
   );

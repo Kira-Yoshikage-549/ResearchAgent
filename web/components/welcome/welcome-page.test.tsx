@@ -11,15 +11,15 @@ import { NextIntlClientProvider } from "next-intl";
 import { StrictMode, type PropsWithChildren } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { replace, scrollTo, animateScroll, createTrigger, kill } = vi.hoisted(
-  () => ({
+const { replace, scrollTo, animateScroll, createTrigger, kill, entranceClaim } =
+  vi.hoisted(() => ({
     replace: vi.fn(),
     scrollTo: vi.fn(),
     animateScroll: vi.fn(),
     createTrigger: vi.fn(),
     kill: vi.fn(),
-  }),
-);
+    entranceClaim: vi.fn(),
+  }));
 vi.mock("gsap", () => ({
   gsap: { registerPlugin: vi.fn(), to: animateScroll },
 }));
@@ -52,6 +52,18 @@ vi.mock("@/components/entry/entry-language-switcher", () => ({
   }) => <button onClick={() => onBeforeSwitch?.("zh-CN")}>Language</button>,
 }));
 vi.mock("./welcome-waves", () => ({ WelcomeWaves: () => null }));
+vi.mock("@/components/entry/menu-character-swap", () => ({
+  MenuCharacterSwap: ({
+    text,
+    claimEntranceSwap,
+  }: {
+    text: string;
+    claimEntranceSwap?: () => boolean;
+  }) => {
+    entranceClaim(claimEntranceSwap);
+    return <span>{text}</span>;
+  },
+}));
 
 import { WELCOME_SESSION_KEY } from "@/features/welcome/welcome-state";
 import { getMessages } from "@/i18n/messages";
@@ -179,6 +191,25 @@ describe("continuous research entry", () => {
     render(entry());
     expect(scrollTo).toHaveBeenCalledWith({ top: 768, behavior: "instant" });
     expect(replace).not.toHaveBeenCalled();
+  });
+  it("offers one first-entrance swap per tab and keeps it consumed after returning", async () => {
+    const view = render(entry());
+    act(() => window.scrollTo({ top: 768, behavior: "instant" }));
+    await waitFor(() => expect(entranceClaim).toHaveBeenCalled());
+    const claim = entranceClaim.mock.lastCall![0] as () => boolean;
+    expect(claim()).toBe(true);
+    expect(claim()).toBe(false);
+    expect(sessionStorage.getItem(WELCOME_SESSION_KEY)).toBe("complete");
+    view.unmount();
+    entranceClaim.mockClear();
+    render(entry());
+    await waitFor(() => expect(entranceClaim).toHaveBeenCalled());
+    expect(entranceClaim.mock.lastCall![0]()).toBe(false);
+  });
+  it("keeps direct menu entry on the ordinary character-swap schedule", async () => {
+    render(entry("en", "menu"));
+    await waitFor(() => expect(entranceClaim).toHaveBeenCalled());
+    expect(entranceClaim.mock.lastCall![0]()).toBe(false);
   });
   it("direct workspace entry and both scroll buttons work with restricted storage", () => {
     vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {

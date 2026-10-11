@@ -13,11 +13,15 @@ export function ResearchMenuSection({
   headingRef,
   onBack,
   onLanguageSwitch,
+  titleAnimationEnabled,
+  claimEntranceCharacterSwap,
 }: {
   sectionRef: RefObject<HTMLElement | null>;
   headingRef: RefObject<HTMLHeadingElement | null>;
   onBack: () => void;
   onLanguageSwitch: (locale: string) => void;
+  titleAnimationEnabled: boolean;
+  claimEntranceCharacterSwap: () => boolean;
 }) {
   const t = useTranslations("entry");
   return (
@@ -25,6 +29,7 @@ export function ResearchMenuSection({
       ref={sectionRef}
       className={styles.page}
       data-testid="research-menu"
+      data-entry-menu
       aria-labelledby="research-menu-title"
     >
       <div className={styles.canvas}>
@@ -42,6 +47,8 @@ export function ResearchMenuSection({
           ref={headingRef}
           tabIndex={-1}
           className={styles.title}
+          idleCharacterSwap={titleAnimationEnabled}
+          claimEntranceCharacterSwap={claimEntranceCharacterSwap}
         >
           {t("menuTitle")}
         </EntryTransitionTitle>
