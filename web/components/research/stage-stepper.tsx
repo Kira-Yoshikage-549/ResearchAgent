@@ -1,20 +1,10 @@
 "use client";
 
-import {
-  Check,
-  Circle,
-  CircleAlert,
-  CircleX,
-  LoaderCircle,
-  Pause,
-} from "lucide-react";
 import { useTranslations } from "next-intl";
 
-import type {
-  ResearchStage,
-  ReplayState,
-  StageStatus,
-} from "@/lib/events/types";
+import type { ResearchStage, ReplayState } from "@/lib/events/types";
+import type { TaskStageLoading } from "@/features/tasks/hooks/use-stage-loading-motion";
+import { StageLoadingIndicator } from "./stage-loading-indicator";
 import { RESEARCH_STAGES } from "@/lib/events/types";
 import {
   taskStageMessageKeys,
@@ -24,10 +14,12 @@ import styles from "./workspace-task.module.css";
 
 export function StageStepper({
   state,
+  loading,
   onSelectStage,
   variant = "default",
 }: {
   state: ReplayState;
+  loading: TaskStageLoading;
   onSelectStage?: (stage: ResearchStage) => void;
   variant?: "default" | "zen";
 }) {
@@ -60,7 +52,11 @@ export function StageStepper({
           >
             <span className={styles.stageNode}>
               <span>{String(index + 1).padStart(2, "0")}</span>
-              <StageIcon status={snapshot.status} />
+              <StageLoadingIndicator
+                motion={loading.stages[stage]}
+                loading={loading}
+                size={variant === "zen" ? "zen-rail" : "rail"}
+              />
             </span>
             <span className={styles.stageName}>
               {t(taskStageMessageKeys[stage])}
@@ -78,41 +74,4 @@ export function StageStepper({
       })}
     </nav>
   );
-}
-
-function StageIcon({ status }: { status: StageStatus }) {
-  switch (status) {
-    case "running":
-      return <LoaderCircle aria-hidden="true" className="h-4 w-4" />;
-    case "completed":
-      return (
-        <Check
-          aria-hidden="true"
-          className="h-4 w-4 text-[var(--color-success)]"
-        />
-      );
-    case "warning":
-      return (
-        <CircleAlert
-          aria-hidden="true"
-          className="h-4 w-4 text-[var(--color-warning)]"
-        />
-      );
-    case "failed":
-      return (
-        <CircleX
-          aria-hidden="true"
-          className="h-4 w-4 text-[var(--color-error)]"
-        />
-      );
-    case "cancelled":
-      return (
-        <Pause
-          aria-hidden="true"
-          className="h-4 w-4 text-[var(--color-text-muted)]"
-        />
-      );
-    default:
-      return <Circle aria-hidden="true" className="h-4 w-4" />;
-  }
 }

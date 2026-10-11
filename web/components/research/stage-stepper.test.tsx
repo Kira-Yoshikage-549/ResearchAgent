@@ -5,6 +5,13 @@ import { describe, expect, it, vi } from "vitest";
 import { StageStepper } from "@/components/research/stage-stepper";
 import { createInitialReplayState } from "@/lib/events/reducer";
 import { Providers } from "@/app/providers";
+import { useStageLoadingMotion } from "@/features/tasks/hooks/use-stage-loading-motion";
+import type { ComponentProps } from "react";
+
+function Stepper(props: Omit<ComponentProps<typeof StageStepper>, "loading">) {
+  const loading = useStageLoadingMotion(props.state);
+  return <StageStepper {...props} loading={loading} />;
+}
 
 function stateWithStages() {
   const state = createInitialReplayState("task-stepper");
@@ -22,7 +29,7 @@ describe("StageStepper", () => {
     state.stages.synthesize.status = "cancelled";
     render(
       <Providers locale="en">
-        <StageStepper state={state} />
+        <Stepper state={state} />
       </Providers>,
     );
 
@@ -53,7 +60,7 @@ describe("StageStepper", () => {
     const onSelectStage = vi.fn();
     render(
       <Providers locale="en">
-        <StageStepper state={stateWithStages()} onSelectStage={onSelectStage} />
+        <Stepper state={stateWithStages()} onSelectStage={onSelectStage} />
       </Providers>,
     );
 

@@ -47,16 +47,12 @@
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 6px;
+  gap: 12px;
   min-height: 24px;
   color: var(--color-text);
   font-size: 20px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-}
-.stageNode svg {
-  width: 12px;
-  height: 12px;
 }
 .stage[data-status="running"],
 .stage[data-status="failed"] {
@@ -240,9 +236,19 @@
   padding-top: 48px;
 }
 .zenContent {
-  grid-column: 1 / span 9;
+  grid-column: 1 / -1;
   min-width: 0;
+  width: max(280px, calc(50% - 152px));
   padding-top: 96px;
+}
+.zenIndicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 240px;
+  height: 120px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
 }
 .zenTitle {
   margin: 0 0 32px;

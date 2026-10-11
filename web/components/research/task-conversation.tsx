@@ -15,6 +15,8 @@ import { useTaskResult } from "@/features/tasks/hooks/use-task-result";
 import { useConversation } from "@/features/followup/conversation";
 import { StopResearchButton } from "@/components/research/task-cancellation";
 import { StageStepper } from "@/components/research/stage-stepper";
+import { StageLoadingCenter } from "@/components/research/stage-loading-indicator";
+import { useStageLoadingMotion } from "@/features/tasks/hooks/use-stage-loading-motion";
 import {
   taskStageMessageKeys,
   taskStatusMessageKeys,
@@ -49,6 +51,7 @@ export function TaskConversation({
   const isReportPage = Boolean(useReportNavigation()?.report);
   const isReportZen = isZen && isReportPage;
   const isLiveZen = isZen && !isReportPage;
+  const loading = useStageLoadingMotion(replayState);
   const [isExpanded, setIsExpanded] = useState(false);
   const toggleRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -185,6 +188,14 @@ export function TaskConversation({
             </p>
             <p className={styles.zenDescription}>{progress}</p>
           </div>
+          {replayState ? (
+            <div
+              className={styles.zenIndicator}
+              data-testid="zen-stage-loading"
+            >
+              <StageLoadingCenter state={replayState} loading={loading} />
+            </div>
+          ) : null}
           <Button
             ref={exitRef}
             className={styles.exitZen}
@@ -209,6 +220,7 @@ export function TaskConversation({
             {replayState && !isReportPage ? (
               <StageStepper
                 state={replayState}
+                loading={loading}
                 variant={isZen ? "zen" : "default"}
               />
             ) : null}
