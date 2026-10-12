@@ -1,5 +1,5 @@
 // Wave geometry adapted from Antoine Wodniack's a-waves: https://wodniack.dev/
-// Canvas rendering and time-normalized simulation: docs/frontend-swiss/home-waves.md
+// MIT license: web/public/licenses/wodniack-waves-MIT.txt
 import { gsap } from "gsap";
 import { Noise } from "noisejs";
 import { createWaveTitle } from "./wave-title";
