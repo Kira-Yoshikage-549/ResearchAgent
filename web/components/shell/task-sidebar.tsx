@@ -8,7 +8,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { useHistory } from "@/features/history/hooks/use-history";
 import { useTask } from "@/features/tasks/hooks/use-task";
 import { cn } from "@/lib/utils/cn";
-import { Link } from "@/i18n/navigation";
+import { EntryTransitionLink as Link } from "@/components/entry/entry-transition-link";
 import { useUiStore } from "@/stores/ui-store";
 import styles from "./workspace-shell.module.css";
 
@@ -38,6 +38,8 @@ export function TaskSidebar({
         <Button
           ref={collapseButtonRef}
           aria-label={t("navigation.collapseTaskSidebar")}
+          aria-expanded={true}
+          aria-controls="task-sidebar"
           onClick={onCollapse ?? toggleTaskSidebar}
           size="icon"
           variant="ghost"

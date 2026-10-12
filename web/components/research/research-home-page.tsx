@@ -13,13 +13,13 @@ import {
 } from "@/components/research/research-composer";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { useActiveTask } from "@/features/tasks/hooks/use-active-task";
-import { Link, useRouter } from "@/i18n/navigation";
+import { useEntryNavigation } from "@/components/entry/entry-transition-provider";
 import { taskStatusMessageKeys } from "@/i18n/task-labels";
 
 import styles from "./research-entry.module.css";
 
 export default function ResearchHomePage() {
-  const router = useRouter();
+  const { navigate } = useEntryNavigation();
   const t = useTranslations();
   const activeTask = useActiveTask();
 
@@ -51,7 +51,7 @@ export default function ResearchHomePage() {
               ) : null}
               <ResearchComposer
                 onCreated={(taskId) =>
-                  router.push(`/research/${encodeURIComponent(taskId)}`)
+                  void navigate(`/research/${encodeURIComponent(taskId)}`)
                 }
               />
             </>
@@ -92,13 +92,13 @@ function ActiveTaskSummary({
         {t("task.activeResearch")} · {taskT("statusLabel")}:{" "}
         {taskT(taskStatusMessageKeys[task.status])}
       </p>
-      <Link
+      <EntryTransitionLink
         href={`/research/${encodeURIComponent(task.id)}`}
         className={styles.returnToTask}
       >
         {t("task.returnToTask")}
         <ArrowRight aria-hidden="true" className="h-4 w-4" />
-      </Link>
+      </EntryTransitionLink>
     </section>
   );
 }

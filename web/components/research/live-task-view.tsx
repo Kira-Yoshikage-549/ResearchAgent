@@ -14,12 +14,14 @@ import { AgentReplay } from "@/components/replay/agent-replay";
 import { ApiHttpError } from "@/lib/api/client";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
+import { useEntryNavigation } from "@/components/entry/entry-transition-provider";
 import styles from "./workspace-task.module.css";
 
 export function LiveTaskView({ taskId }: { taskId: string }) {
   const { task, replayState, connectionStatus, isLoading, error } =
     useTaskEvents(taskId);
   const router = useRouter();
+  const { navigate } = useEntryNavigation();
   const locale = useLocale();
   const t = useTranslations();
   const retryMutation = useRetryTask(taskId);
@@ -99,7 +101,8 @@ export function LiveTaskView({ taskId }: { taskId: string }) {
           retryable
           onRetry={() => {
             void retryMutation.mutateAsync().then((task) => {
-              if (task) router.push(`/research/${encodeURIComponent(task.id)}`);
+              if (task)
+                void navigate(`/research/${encodeURIComponent(task.id)}`);
             });
           }}
         />
@@ -111,7 +114,8 @@ export function LiveTaskView({ taskId }: { taskId: string }) {
           }
           onRetry={() => {
             void retryMutation.mutateAsync().then((task) => {
-              if (task) router.push(`/research/${encodeURIComponent(task.id)}`);
+              if (task)
+                void navigate(`/research/${encodeURIComponent(task.id)}`);
             });
           }}
         />

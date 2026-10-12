@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -74,6 +74,7 @@ describe("report sidebar", () => {
     resetUiStore();
     localStorage.clear();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it("replaces tasks with an always-open directory and shares stable Chinese heading IDs", async () => {
@@ -142,6 +143,8 @@ describe("report sidebar", () => {
   it("restores ordinary collapsible task navigation on other tabs and closes it on returning to the report", async () => {
     const user = userEvent.setup();
     render(reportPage());
+    const list = screen.getByTestId("report-toc-list");
+    list.scrollTop = 60;
     await user.click(screen.getByRole("tab", { name: "Papers (0)" }));
     expect(
       screen.queryByRole("navigation", { name: "On this page" }),
@@ -168,12 +171,43 @@ describe("report sidebar", () => {
       screen.getByRole("complementary", { name: "Task navigation" }),
     ).toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: "Report" }));
+    expect(screen.getByTestId("report-toc-list")).toBe(list);
+    expect(list.scrollTop).toBe(60);
     expect(
       screen.getByRole("navigation", { name: "On this page" }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("complementary", { name: "Task navigation" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("restores focus after an immediate reduced-motion exit commits the interactive directory", async () => {
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn().mockReturnValue({
+        matches: true,
+        media: "(prefers-reduced-motion: reduce)",
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }),
+    );
+    const user = userEvent.setup();
+    render(reportPage());
+    const expand = screen.getByRole("button", { name: "Expand task sidebar" });
+    await user.click(expand);
+    await user.click(
+      screen.getByRole("button", { name: "Collapse task sidebar" }),
+    );
+    expect(screen.getByTestId("report-task-overlay")).toHaveAttribute("hidden");
+    expect(screen.getByTestId("report-toc-list").closest("[inert]")).toBeNull();
+    expect(
+      screen.getByTestId("report-toc-list").closest("[hidden]"),
+    ).toBeNull();
+    await waitFor(() => expect(expand).toHaveFocus());
   });
 
   it("resets report navigation on a new task and a fresh mount despite saved expanded task preferences", async () => {
@@ -210,6 +244,23 @@ describe("report sidebar", () => {
     expect(
       screen.queryByRole("complementary", { name: "Task navigation" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("settles a background exit without replaying focus when the page returns", async () => {
+    const hidden = vi.spyOn(document, "hidden", "get").mockReturnValue(false);
+    const user = userEvent.setup();
+    render(reportPage());
+    const expand = screen.getByRole("button", { name: "Expand task sidebar" });
+    await user.click(expand);
+    hidden.mockReturnValue(true);
+    await user.click(
+      screen.getByRole("button", { name: "Collapse task sidebar" }),
+    );
+    expect(screen.getByTestId("report-task-overlay")).toHaveAttribute("hidden");
+    expect(expand).not.toHaveFocus();
+    hidden.mockReturnValue(false);
+    act(() => document.dispatchEvent(new Event("visibilitychange")));
+    expect(expand).not.toHaveFocus();
   });
 
   it("keeps the current tab when report data updates and offers navigation for reports without headings", async () => {

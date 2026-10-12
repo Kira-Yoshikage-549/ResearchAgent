@@ -90,7 +90,9 @@ test("remaining workspace pages keep the entry identity and usable desktop layou
   expect((await main.boundingBox())!.width).toBeCloseTo(spanWidth(10), 0);
   await capture("report-evidence-collapsed");
   await page.getByRole("button", { name: "Expand context panel" }).click();
-  expect((await main.boundingBox())!.width).toBeCloseTo(spanWidth(7), 0);
+  await expect
+    .poll(async () => (await main.boundingBox())!.width)
+    .toBeCloseTo(spanWidth(7), 0);
   await page.getByRole("button", { name: "Collapse task sidebar" }).click();
   const composerBox = await page.getByTestId("followup-composer").boundingBox();
   const contentBox = await page.getByTestId("task-scroll-region").boundingBox();

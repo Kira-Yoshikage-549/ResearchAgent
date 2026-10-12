@@ -1,9 +1,29 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useRef } from "react";
+import { usePathname } from "@/i18n/navigation";
+import { useResearchTransitionReady } from "@/components/entry/entry-transition-provider";
 
 import { Providers } from "@/app/providers";
 import ResearchHomePage from "@/components/research/research-home-page";
+
+function CreatedDestination() {
+  const ref = useRef<HTMLElement>(null);
+  useResearchTransitionReady(ref);
+  return (
+    <main ref={ref} tabIndex={-1}>
+      Created task
+    </main>
+  );
+}
+function CreatedRoute() {
+  return usePathname() === "/research/new-task" ? (
+    <CreatedDestination />
+  ) : (
+    <ResearchHomePage />
+  );
+}
 
 const activeTask = vi.hoisted(() => ({
   isPending: false,
@@ -83,7 +103,7 @@ describe("ResearchHomePage", () => {
     activeTask.isError = true;
     render(
       <Providers locale="en">
-        <ResearchHomePage />
+        <CreatedRoute />
       </Providers>,
     );
 
@@ -97,6 +117,11 @@ describe("ResearchHomePage", () => {
     await userEvent
       .setup()
       .click(screen.getByRole("button", { name: "Create research" }));
-    expect(window.location.pathname).toBe("/research/new-task");
+    await waitFor(() =>
+      expect(window.location.pathname).toBe("/research/new-task"),
+    );
+    await waitFor(() =>
+      expect(screen.queryByTestId("entry-transition")).not.toBeInTheDocument(),
+    );
   });
 });

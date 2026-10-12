@@ -138,6 +138,10 @@
   scrollbar-color: var(--color-text) var(--color-page);
   scrollbar-width: thin;
 }
+.scrollRegion:has(:global(.report-document)) {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
 .scrollRegion[hidden],
 .composer[hidden],
 .conversation[hidden],

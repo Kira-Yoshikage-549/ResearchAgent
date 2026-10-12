@@ -17,7 +17,7 @@ import {
   ACADEMIC_SOURCES,
   usePreferencesStore,
 } from "@/features/preferences/preferences-store";
-import { Link } from "@/i18n/navigation";
+import { EntryTransitionLink as Link } from "@/components/entry/entry-transition-link";
 
 import { EntryTransitionTitle } from "@/components/entry/entry-transition-title";
 import styles from "./research-entry.module.css";

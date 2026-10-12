@@ -1,7 +1,7 @@
 import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
-import { Link } from "@/i18n/navigation";
+import { EntryTransitionLink as Link } from "@/components/entry/entry-transition-link";
 import styles from "./workspace-task.module.css";
 
 export function TaskTerminalState({

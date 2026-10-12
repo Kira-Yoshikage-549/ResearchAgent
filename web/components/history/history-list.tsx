@@ -12,7 +12,7 @@ import { RenameTaskDialog } from "@/components/history/rename-task-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { TaskSnapshotResponse } from "@/lib/api/client";
-import { Link } from "@/i18n/navigation";
+import { EntryTransitionLink as Link } from "@/components/entry/entry-transition-link";
 import { taskStatusMessageKeys } from "@/i18n/task-labels";
 import type { TaskStatus } from "@/lib/events/types";
 

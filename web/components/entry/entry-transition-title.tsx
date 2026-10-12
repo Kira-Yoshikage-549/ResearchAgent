@@ -24,6 +24,7 @@ type Props = Omit<ComponentProps<"h1">, "children" | "ref"> & {
   ref?: Ref<HTMLHeadingElement>;
   idleCharacterSwap?: boolean;
   claimEntranceCharacterSwap?: () => boolean;
+  shortTransitionReady?: boolean;
 };
 
 export function EntryTransitionTitle({
@@ -33,19 +34,21 @@ export function EntryTransitionTitle({
   ref,
   idleCharacterSwap = false,
   claimEntranceCharacterSwap,
+  shortTransitionReady = true,
   ...props
 }: Props) {
   const context = useContext(EntryTransitionContext);
   const pathname = usePathname();
   const locale = useLocale();
   const headingRef = useRef<HTMLHeadingElement>(null);
-  const active =
+  const destination =
     context?.busy && normalizeEntryPath(pathname) === context.target;
+  const active = destination && context?.mode !== "research";
   const registerTitle = context?.registerTitle;
   useLayoutEffect(() => {
-    if (active && headingRef.current)
+    if (destination && (active || shortTransitionReady) && headingRef.current)
       return registerTitle?.(headingRef.current);
-  }, [active, registerTitle, children]);
+  }, [destination, active, shortTransitionReady, registerTitle, children]);
 
   return (
     <Heading

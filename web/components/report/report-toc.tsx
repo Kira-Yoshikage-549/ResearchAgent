@@ -4,9 +4,10 @@ import { useTranslations } from "next-intl";
 import { PanelLeftOpen } from "lucide-react";
 
 import type { ReportHeading } from "@/lib/markdown/report-headings";
-import type { CSSProperties, Ref } from "react";
+import { useRef, type CSSProperties, type Ref } from "react";
 import { Button } from "@/components/ui/button";
 import styles from "./report-toc.module.css";
+import { useReportAnchorScroll } from "./use-report-anchor-scroll";
 
 export function ReportToc({
   headings,
@@ -20,8 +21,10 @@ export function ReportToc({
   expandButtonRef?: Ref<HTMLButtonElement>;
 }) {
   const t = useTranslations();
+  const navRef = useRef<HTMLElement>(null);
+  const navigate = useReportAnchorScroll(navRef, headings);
   return (
-    <nav aria-label={t("report.contents")} className={styles.toc}>
+    <nav ref={navRef} aria-label={t("report.contents")} className={styles.toc}>
       <div className={styles.header}>
         <Button
           ref={expandButtonRef}
@@ -51,7 +54,12 @@ export function ReportToc({
                 } as CSSProperties
               }
             >
-              <a href={`#${heading.id}`}>{heading.text}</a>
+              <a
+                href={`#${heading.id}`}
+                onClick={(event) => navigate(event, heading.id)}
+              >
+                {heading.text}
+              </a>
             </li>
           ))}
         </ol>

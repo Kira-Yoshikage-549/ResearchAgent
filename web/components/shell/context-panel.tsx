@@ -75,7 +75,11 @@ function ContextPanelContent({
   const setContextTab = useUiStore((state) => state.setContextTab);
 
   return (
-    <aside aria-label={t("common.contextPanel")} className={styles.context}>
+    <aside
+      id="context-panel"
+      aria-label={t("common.contextPanel")}
+      className={styles.context}
+    >
       <div className={styles.contextHeader}>
         <Library aria-hidden="true" size={18} strokeWidth={1.8} />
         <h2>{t("common.context")}</h2>

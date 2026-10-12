@@ -48,6 +48,7 @@ export function ResearchMenuSection({
           tabIndex={-1}
           className={styles.title}
           idleCharacterSwap={titleAnimationEnabled}
+          shortTransitionReady={titleAnimationEnabled}
           claimEntranceCharacterSwap={claimEntranceCharacterSwap}
         >
           {t("menuTitle")}

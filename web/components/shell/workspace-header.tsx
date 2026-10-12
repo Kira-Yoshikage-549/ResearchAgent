@@ -2,6 +2,7 @@
 
 import { PanelLeftOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { useTranslations } from "next-intl";
+import type { Ref } from "react";
 
 import { StopResearchButton } from "@/components/research/task-cancellation";
 import { LanguageSwitcher } from "@/components/shell/language-switcher";
@@ -12,7 +13,19 @@ import { useReportNavigation } from "@/features/report/report-navigation";
 import { useUiStore } from "@/stores/ui-store";
 import styles from "./workspace-shell.module.css";
 
-export function WorkspaceHeader({ taskId }: { taskId?: string }) {
+export function WorkspaceHeader({
+  taskId,
+  expandTaskSidebarRef,
+  contextToggleRef,
+  onToggleTaskSidebar,
+  onToggleContextPanel,
+}: {
+  taskId?: string;
+  expandTaskSidebarRef?: Ref<HTMLButtonElement>;
+  contextToggleRef?: Ref<HTMLButtonElement>;
+  onToggleTaskSidebar?: () => void;
+  onToggleContextPanel?: () => void;
+}) {
   const t = useTranslations();
   const storedTaskSidebarOpen = useUiStore((state) => state.isTaskSidebarOpen);
   const navigation = useReportNavigation();
@@ -41,8 +54,11 @@ export function WorkspaceHeader({ taskId }: { taskId?: string }) {
       <div className="flex min-w-0 flex-1 items-center gap-2">
         {!isTaskSidebarOpen && !isReportReading ? (
           <Button
+            ref={expandTaskSidebarRef}
             aria-label={t("navigation.expandTaskSidebar")}
-            onClick={toggleTaskSidebar}
+            aria-expanded={false}
+            aria-controls="task-sidebar"
+            onClick={onToggleTaskSidebar ?? toggleTaskSidebar}
             size="icon"
             variant="ghost"
             className="shrink-0"
@@ -82,12 +98,15 @@ export function WorkspaceHeader({ taskId }: { taskId?: string }) {
         ) : null}
         <StopResearchButton />
         <Button
+          ref={contextToggleRef}
+          aria-expanded={isContextPanelOpen}
+          aria-controls="context-panel"
           aria-label={
             isContextPanelOpen
               ? t("common.collapseContext")
               : t("common.expandContext")
           }
-          onClick={toggleContextPanel}
+          onClick={onToggleContextPanel ?? toggleContextPanel}
           size="icon"
           variant="ghost"
         >

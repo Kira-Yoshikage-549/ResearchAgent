@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
-import { StrictMode } from "react";
+import { StrictMode, useRef } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getMessages } from "@/i18n/messages";
 import { usePathname } from "@/i18n/navigation";
@@ -10,6 +10,7 @@ import {
   EntryTransitionProvider,
   useEntryNavigation,
   useEntryTransitionBlock,
+  useResearchTransitionReady,
 } from "./entry-transition-provider";
 
 const animation = vi.hoisted(() => ({
@@ -46,13 +47,19 @@ vi.mock("gsap/CustomEase", () => ({
 function Controls({
   showTitle = true,
   blocked = false,
+  showSurface = false,
+  shortReady = true,
 }: {
   showTitle?: boolean;
   blocked?: boolean;
+  showSurface?: boolean;
+  shortReady?: boolean;
 }) {
   const { navigate, busy } = useEntryNavigation();
   const pathname = usePathname();
   useEntryTransitionBlock(blocked);
+  const surfaceRef = useRef<HTMLDivElement>(null);
+  useResearchTransitionReady(surfaceRef);
   return (
     <>
       <button onClick={() => void navigate("/history", { replace: true })}>
@@ -66,8 +73,16 @@ function Controls({
       </EntryTransitionLink>
       <EntryTransitionLink href="/history">History</EntryTransitionLink>
       <EntryTransitionLink href="/settings">Settings</EntryTransitionLink>
+      <EntryTransitionLink href="/research/existing-task">
+        Open task
+      </EntryTransitionLink>
+      {showSurface ? (
+        <div ref={surfaceRef} tabIndex={-1}>
+          Loading task
+        </div>
+      ) : null}
       {showTitle ? (
-        <EntryTransitionTitle>
+        <EntryTransitionTitle shortTransitionReady={shortReady}>
           {pathname.includes("history")
             ? "Research history"
             : pathname.includes("settings")
@@ -179,9 +194,53 @@ describe("masked entry navigation", () => {
         return;
       }
       expect(window.location.pathname).toBe(source);
-      await finishAnimation();
+      if (source === "/settings") {
+        for (let i = 0; i < 3; i++) await complete();
+      } else {
+        await finishAnimation();
+      }
       expect(window.location.pathname).toBe("/history");
       expect(screen.getByText("Ready")).toBeInTheDocument();
+    },
+  );
+
+  it.each([
+    { source: "/en/history", target: "/settings", name: "Settings" },
+    { source: "/zh-CN/settings", target: "/history", name: "History" },
+  ])(
+    "uses the short paper mask from $source to $target",
+    async ({ source, target, name }) => {
+      window.history.replaceState({}, "", source);
+      const push = vi.spyOn(window.history, "pushState");
+      render(tree(source.includes("zh-CN") ? "zh-CN" : "en"));
+      fireEvent.click(screen.getByRole("link", { name }));
+      fireEvent.click(screen.getByRole("link", { name }));
+      expect(push).not.toHaveBeenCalled();
+      expect(screen.getByTestId("entry-transition")).toHaveAttribute(
+        "data-direction",
+        "forward",
+      );
+      expect(
+        screen.queryByTestId("entry-transition-center"),
+      ).not.toBeInTheDocument();
+      expect(animation.pending[0].duration).toBe(0.18);
+      await complete();
+      expect(push).toHaveBeenCalledTimes(1);
+      expect(window.location.pathname).toBe(target);
+      expect(phase()).toBe("holding");
+      const heading = screen.getByRole("heading", {
+        name: target === "/history" ? "Research history" : "Settings",
+        hidden: true,
+      });
+      expect(heading).not.toHaveAttribute("data-entry-title-active");
+      expect(heading.querySelector("[data-entry-word]")).toBeNull();
+      expect(animation.pending[0].duration).toBe(0.4);
+      await complete();
+      expect(phase()).toBe("uncovering");
+      expect(animation.pending[0].duration).toBe(0.24);
+      await complete();
+      expect(screen.queryByTestId("entry-transition")).not.toBeInTheDocument();
+      expect(heading).toHaveFocus();
     },
   );
 
@@ -272,12 +331,135 @@ describe("masked entry navigation", () => {
     expect(screen.queryByTestId("entry-transition")).not.toBeInTheDocument();
   });
 
-  it("navigates directly from a research task outside the entry group", () => {
+  it("returns from a task with the same forward mask and keeps native titles", async () => {
     window.history.replaceState({}, "", "/research/existing-task");
     render(tree());
     fireEvent.click(screen.getByRole("link", { name: "Back to menu" }));
+    expect(window.location.pathname).toBe("/research/existing-task");
+    expect(screen.getByTestId("entry-transition")).toHaveAttribute(
+      "data-direction",
+      "forward",
+    );
+    expect(
+      screen.queryByTestId("entry-transition-center"),
+    ).not.toBeInTheDocument();
+    expect(animation.pending[0].duration).toBe(0.18);
+    await complete();
     expect(window.location.pathname).toBe("/workspace");
+    const heading = screen.getByRole("heading", {
+      name: "Choose your next step",
+      hidden: true,
+    });
+    expect(heading.querySelector("[data-entry-word]")).toBeNull();
+    expect(heading).not.toHaveAttribute("data-entry-title-active");
+    expect(phase()).toBe("holding");
+    expect(animation.pending[0].duration).toBe(0.4);
+    await complete();
+    expect(animation.pending[0].duration).toBe(0.24);
+    await complete();
     expect(screen.queryByTestId("entry-transition")).not.toBeInTheDocument();
+    expect(heading).toHaveFocus();
+  });
+
+  it("opens a task after coverage and focuses the mounted loading shell", async () => {
+    window.history.replaceState({}, "", "/history");
+    render(tree("en", { showTitle: false, showSurface: true }));
+    const push = vi.spyOn(window.history, "pushState");
+    fireEvent.click(screen.getByRole("link", { name: "Open task" }));
+    fireEvent.click(screen.getByRole("link", { name: "Settings" }));
+    expect(push).not.toHaveBeenCalled();
+    expect(screen.getByTestId("entry-transition")).toHaveAttribute(
+      "data-mode",
+      "research",
+    );
+    await complete();
+    expect(push).toHaveBeenCalledTimes(1);
+    expect(phase()).toBe("holding");
+    expect(animation.pending[0].duration).toBe(0.4);
+    fireEvent.click(screen.getByRole("link", { name: "Settings" }));
+    expect(push).toHaveBeenCalledTimes(1);
+    await complete();
+    expect(phase()).toBe("uncovering");
+    await complete();
+    expect(screen.getByText("Loading task")).toHaveFocus();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("waits for menu positioning before a short return unveils it", async () => {
+    window.history.replaceState({}, "", "/research/existing-task");
+    const view = render(tree("en", { shortReady: false }));
+    fireEvent.click(screen.getByRole("link", { name: "Back to menu" }));
+    await complete();
+    await complete();
+    expect(phase()).toBe("holding");
+    view.rerender(tree());
+    await act(async () => {});
+    expect(phase()).toBe("uncovering");
+    await complete();
+    expect(screen.getByText("Ready")).toBeInTheDocument();
+  });
+
+  it.each(["History", "Settings", "New research"])(
+    "uses short navigation from a task to %s",
+    async (name) => {
+      window.history.replaceState({}, "", "/research/existing-task");
+      render(tree());
+      fireEvent.click(screen.getByRole("link", { name }));
+      expect(screen.getByTestId("entry-transition")).toHaveAttribute(
+        "data-direction",
+        "forward",
+      );
+      await complete();
+      await complete();
+      await complete();
+      expect(screen.getByText("Ready")).toBeInTheDocument();
+    },
+  );
+
+  it("releases a short mask when a task surface never mounts", async () => {
+    render(tree("en", { showTitle: false }));
+    fireEvent.click(screen.getByRole("link", { name: "Open task" }));
+    await complete();
+    await complete();
+    expect(phase()).toBe("holding");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+    expect(screen.getByText("Ready")).toBeInTheDocument();
+    expect(screen.queryByTestId("entry-transition")).not.toBeInTheDocument();
+  });
+
+  it("submits a short navigation once when reduced motion is enabled during coverage", async () => {
+    const motion = new EventTarget() as EventTarget & { matches: boolean };
+    motion.matches = false;
+    vi.stubGlobal("matchMedia", () => motion);
+    render(tree("en", { showSurface: true }));
+    const push = vi.spyOn(window.history, "pushState");
+    fireEvent.click(screen.getByRole("link", { name: "Open task" }));
+    act(() => {
+      motion.matches = true;
+      motion.dispatchEvent(new Event("change"));
+    });
+    expect(window.location.pathname).toBe("/research/existing-task");
+    expect(push).toHaveBeenCalledTimes(1);
+    await complete();
+    expect(push).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("Ready")).toBeInTheDocument();
+  });
+
+  it("keeps current-task and modified task clicks native", () => {
+    window.history.replaceState({}, "", "/research/existing-task");
+    render(tree());
+    const push = vi.spyOn(window.history, "pushState");
+    fireEvent.click(screen.getByRole("link", { name: "Open task" }));
+    fireEvent.click(screen.getByRole("link", { name: "History" }), {
+      ctrlKey: true,
+    });
+    expect(push).not.toHaveBeenCalled();
+    expect(animation.pending).toHaveLength(0);
   });
 
   it("preserves modified clicks and ignores the current page", () => {

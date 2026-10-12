@@ -61,10 +61,12 @@ function Harness({ busy = false, top = 0 }) {
         busy,
         target: busy ? "/workspace" : null,
         phase: busy ? "center-in" : "idle",
+        mode: "entry",
         start: async () => {},
         cancel: () => {},
         cancelForLocale: () => {},
         registerTitle: () => () => {},
+        registerSurface: () => () => {},
       }}
     >
       <section

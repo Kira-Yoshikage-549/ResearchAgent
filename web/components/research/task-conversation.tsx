@@ -17,6 +17,7 @@ import { StopResearchButton } from "@/components/research/task-cancellation";
 import { StageStepper } from "@/components/research/stage-stepper";
 import { StageLoadingCenter } from "@/components/research/stage-loading-indicator";
 import { useStageLoadingMotion } from "@/features/tasks/hooks/use-stage-loading-motion";
+import { useReportReveal } from "./use-report-reveal";
 import {
   taskStageMessageKeys,
   taskStatusMessageKeys,
@@ -45,7 +46,7 @@ export function TaskConversation({
   const t = useTranslations("followup");
   const taskT = useTranslations("task");
   const task = useTask(taskId);
-  const { replayState } = useTaskEvents(taskId);
+  const { replayState, isLoading, error } = useTaskEvents(taskId);
   const progress = useStageProgress(replayState);
   const isZen = useUiStore((store) => store.zenTaskId === taskId);
   const isReportPage = Boolean(useReportNavigation()?.report);
@@ -67,6 +68,17 @@ export function TaskConversation({
     null,
   );
   const scrollRegion = useRef<HTMLDivElement>(null);
+  useReportReveal(
+    scrollRegion,
+    Boolean(
+      replayState &&
+      !isLoading &&
+      !error &&
+      !replayState.isTerminal &&
+      !replayState.artifacts.resultAvailable,
+    ),
+    isReportPage && Boolean(result.data),
+  );
   const normalScrollTop = useRef(0);
   const wasReportZen = useRef(false);
   useLayoutEffect(() => {
@@ -133,6 +145,7 @@ export function TaskConversation({
           if (!isZen) normalScrollTop.current = event.currentTarget.scrollTop;
         }}
         className={styles.scrollRegion}
+        data-report-scroll-region={isReportPage || undefined}
         data-testid="task-scroll-region"
       >
         {children}

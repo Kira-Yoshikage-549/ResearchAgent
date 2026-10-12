@@ -15,7 +15,7 @@ type Props = Omit<ComponentProps<typeof Link>, "href" | "onNavigate"> & {
 
 export function EntryTransitionLink({
   href,
-  direction = "forward",
+  direction,
   replace,
   ...props
 }: Props) {

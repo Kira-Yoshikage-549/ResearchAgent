@@ -1,7 +1,16 @@
 .shell {
+  --workspace-column-width: calc((max(1024px, 100vw) - 360px) / 12);
+  --left-width: calc(var(--workspace-column-width) * 2 + 24px);
+  --right-width: calc(var(--workspace-column-width) * 3 + 48px);
+  --left-progress: 1;
+  --right-progress: 1;
   display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  column-gap: 24px;
+  grid-template-columns:
+    calc(var(--left-width) * max(0, var(--left-progress)))
+    calc(24px * max(0, var(--left-progress)))
+    minmax(0, 1fr)
+    calc(24px * max(0, var(--right-progress)))
+    calc(var(--right-width) * max(0, var(--right-progress)));
   height: 100dvh;
   min-width: 1024px;
   padding-inline: 48px;
@@ -12,24 +21,60 @@
 }
 
 .main {
-  grid-column: 3 / span 7;
+  grid-column: 3;
+  grid-row: 1;
   display: grid;
-  grid-template-columns: subgrid;
+  grid-template-columns: repeat(
+    var(--workspace-column-count, 7),
+    minmax(0, 1fr)
+  );
+  column-gap: 24px;
   grid-template-rows: 76px minmax(0, 1fr) auto;
   min-height: 0;
   min-width: 0;
   overflow: hidden;
 }
 
-.shell[data-left-rail="closed"] .main {
-  grid-column: 1 / span 9;
+.shell[data-left-rail="closed"] {
+  --left-progress: 0;
 }
-.shell[data-context="closed"] .main {
-  grid-column: 3 / span 10;
+.shell[data-context="closed"] {
+  --right-progress: 0;
 }
-.shell[data-left-rail="closed"][data-context="closed"] .main,
-.shell[data-zen] .main {
-  grid-column: 1 / -1;
+.leftViewport,
+.rightViewport {
+  grid-row: 1;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: clip;
+}
+.leftViewport {
+  grid-column: 1;
+  opacity: clamp(0, var(--left-progress), 1);
+}
+.rightViewport {
+  grid-column: 5;
+  opacity: clamp(0, var(--right-progress), 1);
+}
+.leftViewport[hidden],
+.rightViewport[hidden],
+.reportTocSlot[hidden],
+.reportTaskOverlay[hidden] {
+  display: none;
+}
+.leftContents,
+.rightContents {
+  position: absolute;
+  inset-block: 0;
+}
+.leftContents {
+  inset-inline-start: 0;
+  width: var(--left-width);
+}
+.rightContents {
+  inset-inline-end: 0;
+  width: var(--right-width);
 }
 .shell[data-zen] .main {
   grid-template-rows: minmax(0, 1fr) auto;
@@ -67,7 +112,7 @@
 }
 
 .sidebar {
-  grid-column: 1 / span 2;
+  height: 100%;
   display: flex;
   min-height: 0;
   flex-direction: column;
@@ -83,7 +128,7 @@
 }
 
 .reportSidebar {
-  grid-column: 1 / span 2;
+  height: 100%;
   position: relative;
   min-width: 0;
   min-height: 0;
@@ -96,11 +141,14 @@
 }
 
 .reportTaskOverlay {
+  --panel-progress: 0;
   position: absolute;
   inset: 0;
   z-index: 20;
   display: flex;
   background: var(--color-page);
+  clip-path: inset(0 calc((1 - clamp(0, var(--panel-progress), 1)) * 100%) 0 0);
+  opacity: clamp(0, var(--panel-progress), 1);
 }
 
 .reportTaskOverlay > .sidebar {
@@ -120,6 +168,12 @@
   flex: 1;
   overflow-y: auto;
   padding-block: 24px;
+}
+.shell[data-report] .sidebarBody {
+  scrollbar-width: none;
+}
+.shell[data-report] .sidebarBody::-webkit-scrollbar {
+  display: none;
 }
 .newResearch {
   width: 100%;
@@ -183,7 +237,7 @@
 }
 
 .context {
-  grid-column: 10 / span 3;
+  height: 100%;
   display: flex;
   min-height: 0;
   min-width: 0;

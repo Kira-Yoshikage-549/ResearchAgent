@@ -12,6 +12,7 @@ import {
   useRef,
   useState,
   type ReactNode,
+  type RefObject,
 } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { usePathname, useRouter } from "@/i18n/navigation";
@@ -19,8 +20,14 @@ import { EntryTransitionWords } from "./entry-transition-words";
 import styles from "./entry-transition.module.css";
 
 export type EntryPath =
-  "/" | "/workspace" | "/research/new" | "/history" | "/settings";
+  | "/"
+  | "/workspace"
+  | "/research/new"
+  | "/history"
+  | "/settings"
+  | `/research/${string}`;
 export type EntryDirection = "forward" | "backward";
+type TransitionMode = "entry" | "research";
 type NavigateOptions = { replace?: boolean; direction?: EntryDirection };
 type Phase =
   | "idle"
@@ -36,6 +43,10 @@ type Navigation = {
   locale: string;
   origin: HTMLElement | null;
   heading: HTMLHeadingElement | null;
+  surface: HTMLElement | null;
+  mode: TransitionMode;
+  direction: EntryDirection;
+  dispatched: boolean;
   dispatch: () => void;
   resolve: () => void;
   ready: Promise<boolean>;
@@ -46,13 +57,16 @@ type TransitionContext = {
   busy: boolean;
   target: EntryPath | null;
   phase: Phase;
+  mode: TransitionMode;
   start: (
     href: EntryPath,
     dispatch: () => void,
     locale: string,
+    direction?: EntryDirection,
   ) => Promise<void>;
   cancelForLocale: (locale: string) => void;
   registerTitle: (heading: HTMLHeadingElement) => () => void;
+  registerSurface: (surface: HTMLElement) => () => void;
   cancel: () => void;
 };
 export const EntryTransitionContext = createContext<TransitionContext | null>(
@@ -77,6 +91,9 @@ export function normalizeEntryPath(pathname: string) {
 function menuPath(path: string) {
   return path === "/" ? "/workspace" : path;
 }
+function isTaskPath(path: string) {
+  return path !== "/research/new" && /^\/research\/[^/]+$/.test(path);
+}
 function staggerFor(words: Element[]) {
   return words.length > 1 ? Math.min(0.08, 0.24 / (words.length - 1)) : 0;
 }
@@ -85,9 +102,12 @@ export function EntryTransitionProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const locale = useLocale();
   const t = useTranslations("entry");
+  const taskT = useTranslations("task");
   const [phase, setPhase] = useState<Phase>("idle");
   const [target, setTarget] = useState<EntryPath | null>(null);
   const [label, setLabel] = useState("");
+  const [mode, setMode] = useState<TransitionMode>("entry");
+  const [direction, setDirection] = useState<EntryDirection>("forward");
   const navigationRef = useRef<Navigation | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tweenRef = useRef<gsap.core.Tween | null>(null);
@@ -131,6 +151,17 @@ export function EntryTransitionProvider({ children }: { children: ReactNode }) {
       if (navigation.heading === heading) navigation.heading = null;
     };
   }, []);
+  const registerSurface = useCallback((surface: HTMLElement) => {
+    const navigation = navigationRef.current;
+    if (!navigation || navigation.mode !== "research") return () => {};
+    navigation.surface = surface;
+    navigation.markReady(true);
+    if (timerRef.current !== null) clearTimeout(timerRef.current);
+    timerRef.current = null;
+    return () => {
+      if (navigation.surface === surface) navigation.surface = null;
+    };
+  }, []);
   const play = useCallback(
     (
       navigation: Navigation,
@@ -158,6 +189,52 @@ export function EntryTransitionProvider({ children }: { children: ReactNode }) {
     if (phase !== "covering" || !navigation || navigation.started) return;
     navigation.started = true;
     const sheet = sheetRef.current;
+    if (!sheet) return finish(navigation.origin);
+    if (navigation.mode === "research") {
+      const sign = navigation.direction === "backward" ? -1 : 1;
+      const run = async () => {
+        gsap.set(sheet, { x: 0, xPercent: sign * 100 });
+        if (
+          !(await play(navigation, sheet, {
+            xPercent: 0,
+            duration: 0.18,
+            ease: "power2.in",
+          }))
+        )
+          return;
+        setPhase("holding");
+        timerRef.current = setTimeout(() => finish(), ROUTE_TIMEOUT_MS);
+        try {
+          navigation.dispatched = true;
+          navigation.dispatch();
+        } catch {
+          finish(navigation.origin);
+          return;
+        }
+        if (!(await play(navigation, {}, { duration: 0.4 }))) return;
+        if (!(await navigation.ready) || navigationRef.current !== navigation)
+          return;
+        setPhase("uncovering");
+        if (
+          !(await play(navigation, sheet, {
+            xPercent: sign * -100,
+            duration: 0.24,
+            ease: "power3.out",
+          }))
+        )
+          return;
+        const surface = navigation.surface;
+        const heading =
+          navigation.heading ??
+          Array.from(
+            surface?.querySelectorAll<HTMLElement>("h1, h2") ?? [],
+          ).find((element) => element.getClientRects().length > 0);
+        if (heading && !heading.hasAttribute("tabindex")) heading.tabIndex = -1;
+        finish(heading ?? surface);
+      };
+      void run().catch(() => finish());
+      return;
+    }
     const center = centerRef.current;
     if (!sheet || !center) return finish(navigation.origin);
     const words = Array.from(center.querySelectorAll("[data-entry-word]"));
@@ -171,6 +248,7 @@ export function EntryTransitionProvider({ children }: { children: ReactNode }) {
       // Cached destination routes may register their heading during dispatch.
       timerRef.current = setTimeout(() => finish(), ROUTE_TIMEOUT_MS);
       try {
+        navigation.dispatched = true;
         navigation.dispatch();
       } catch {
         finish(navigation.origin);
@@ -231,12 +309,20 @@ export function EntryTransitionProvider({ children }: { children: ReactNode }) {
       href: EntryPath,
       dispatch: () => void,
       nextLocale: string,
+      nextDirection?: EntryDirection,
     ): Promise<void> => {
       if (navigationRef.current) return Promise.resolve();
       const source = normalizeEntryPath(pathname);
       if (menuPath(source) === menuPath(href)) return Promise.resolve();
+      const isHistorySettingsSwitch =
+        (source === "/history" && href === "/settings") ||
+        (source === "/settings" && href === "/history");
+      const nextMode =
+        isTaskPath(source) || isTaskPath(href) || isHistorySettingsSwitch
+          ? "research"
+          : "entry";
       if (
-        !entryPaths.has(source) ||
+        !(entryPaths.has(source) || isTaskPath(source)) ||
         window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
       ) {
         try {
@@ -264,22 +350,31 @@ export function EntryTransitionProvider({ children }: { children: ReactNode }) {
               ? document.activeElement
               : null,
           heading: null,
+          surface: null,
+          mode: nextMode,
+          direction:
+            nextMode === "research" ? "forward" : (nextDirection ?? "forward"),
+          dispatched: false,
           started: false,
         };
         setLabel(
-          href === "/research/new"
-            ? t("transition.newResearch")
-            : href === "/history"
-              ? t("transition.history")
-              : href === "/settings"
-                ? t("transition.settings")
-                : t("menuTitle"),
+          isTaskPath(href)
+            ? taskT("researchTask")
+            : href === "/research/new"
+              ? t("transition.newResearch")
+              : href === "/history"
+                ? t("transition.history")
+                : href === "/settings"
+                  ? t("transition.settings")
+                  : t("menuTitle"),
         );
+        setMode(nextMode);
+        setDirection(navigationRef.current.direction);
         setTarget(href);
         setPhase("covering");
       });
     },
-    [pathname, t],
+    [pathname, t, taskT],
   );
 
   useLayoutEffect(() => {
@@ -303,7 +398,17 @@ export function EntryTransitionProvider({ children }: { children: ReactNode }) {
     };
     const motion = window.matchMedia?.("(prefers-reduced-motion: reduce)");
     const motionChanged = () => {
-      if (motion?.matches) finish();
+      if (!motion?.matches) return;
+      const navigation = navigationRef.current;
+      if (navigation?.mode === "research" && !navigation.dispatched) {
+        try {
+          navigation.dispatched = true;
+          navigation.dispatch();
+        } catch {
+          /* Release the mask even if routing fails. */
+        }
+      }
+      finish();
     };
     // Keep scrollbar geometry and allow useEntryScroll's programmatic positioning.
     window.addEventListener("wheel", preventScroll, { passive: false });
@@ -329,6 +434,14 @@ export function EntryTransitionProvider({ children }: { children: ReactNode }) {
     window.addEventListener("popstate", cancel);
     return () => window.removeEventListener("popstate", cancel);
   }, [cancel]);
+  useEffect(() => {
+    const hidden = () => {
+      if (document.hidden && navigationRef.current?.mode === "research")
+        cancel();
+    };
+    document.addEventListener("visibilitychange", hidden);
+    return () => document.removeEventListener("visibilitychange", hidden);
+  }, [cancel]);
 
   const context = useMemo(
     () => ({
@@ -339,8 +452,20 @@ export function EntryTransitionProvider({ children }: { children: ReactNode }) {
       busy,
       target,
       phase,
+      mode,
+      registerSurface,
     }),
-    [start, cancelForLocale, registerTitle, cancel, busy, target, phase],
+    [
+      start,
+      cancelForLocale,
+      registerTitle,
+      registerSurface,
+      cancel,
+      busy,
+      target,
+      phase,
+      mode,
+    ],
   );
   return (
     <EntryTransitionContext.Provider value={context}>
@@ -356,6 +481,8 @@ export function EntryTransitionProvider({ children }: { children: ReactNode }) {
             className={styles.overlay}
             data-testid="entry-transition"
             data-phase={phase}
+            data-mode={mode}
+            data-direction={direction}
             aria-hidden="true"
           >
             <div
@@ -363,18 +490,34 @@ export function EntryTransitionProvider({ children }: { children: ReactNode }) {
               className={styles.sheet}
               data-testid="entry-transition-sheet"
             />
-            <div
-              ref={centerRef}
-              className={styles.center}
-              data-testid="entry-transition-center"
-            >
-              <EntryTransitionWords text={label} locale={locale} />
-            </div>
+            {mode === "entry" ? (
+              <div
+                ref={centerRef}
+                className={styles.center}
+                data-testid="entry-transition-center"
+              >
+                <EntryTransitionWords text={label} locale={locale} />
+              </div>
+            ) : null}
           </div>
         </>
       ) : null}
     </EntryTransitionContext.Provider>
   );
+}
+
+/** A task's mounted shell is ready even when its data is loading or failed. */
+export function useResearchTransitionReady(ref: RefObject<HTMLElement | null>) {
+  const context = useContext(EntryTransitionContext);
+  const pathname = usePathname();
+  const active =
+    context?.busy &&
+    context.mode === "research" &&
+    normalizeEntryPath(pathname) === context.target;
+  const register = context?.registerSurface;
+  useLayoutEffect(() => {
+    if (active && ref.current) return register?.(ref.current);
+  }, [active, ref, register]);
 }
 
 export function useEntryTransitionBlock(blocked: boolean) {
@@ -402,7 +545,8 @@ export function useEntryNavigation(): {
         options.replace
           ? router.replace(href, { scroll: menuPath(href) !== "/workspace" })
           : router.push(href, { scroll: menuPath(href) !== "/workspace" });
-      if (context) return context.start(href, dispatch, locale);
+      if (context)
+        return context.start(href, dispatch, locale, options.direction);
       try {
         dispatch();
       } catch {
