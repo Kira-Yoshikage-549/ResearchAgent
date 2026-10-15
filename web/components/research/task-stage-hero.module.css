@@ -17,7 +17,7 @@
   color: var(--color-text);
   font-family: var(--font-ui);
   font-size: 64px;
-  font-weight: 700;
+  font-weight: var(--font-weight-ui-strong);
   line-height: 1;
   letter-spacing: -0.03em;
   overflow-wrap: anywhere;
@@ -59,7 +59,7 @@
   min-height: 56px;
   padding-block: 16px;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: var(--font-weight-ui-strong);
   list-style: none;
   cursor: pointer;
 }

@@ -22,7 +22,7 @@
   grid-column: 1 / 9;
   margin: 0;
   font-size: 96px;
-  font-weight: 700;
+  font-weight: var(--font-weight-ui-strong);
   line-height: 0.95;
   letter-spacing: -0.04em;
   overflow-wrap: anywhere;
@@ -47,7 +47,7 @@
   color: var(--color-page);
   padding: 12px 16px;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: var(--font-weight-ui-strong);
 }
 
 .createLink:hover {
@@ -101,7 +101,7 @@
   min-width: 0;
   gap: 12px;
   font-size: 12px;
-  font-weight: 400;
+  font-weight: var(--font-weight-ui-regular);
 }
 
 .searchField,
@@ -120,7 +120,7 @@
   color: var(--color-text);
   padding-inline: 12px;
   font-size: 14px;
-  font-weight: 400;
+  font-weight: var(--font-weight-ui-regular);
 }
 
 .select {
@@ -169,7 +169,7 @@
 .taskLink {
   color: var(--color-text);
   font-size: 24px;
-  font-weight: 700;
+  font-weight: var(--font-weight-ui-strong);
   line-height: 1.2;
   letter-spacing: -0.025em;
   overflow-wrap: anywhere;
@@ -250,7 +250,7 @@
 
 .emptyState h2 {
   font-size: 32px;
-  font-weight: 700;
+  font-weight: var(--font-weight-ui-strong);
   line-height: 1.2;
   letter-spacing: -0.025em;
 }
@@ -270,7 +270,7 @@
   margin-top: 24px;
   color: var(--color-primary);
   font-size: 14px;
-  font-weight: 700;
+  font-weight: var(--font-weight-ui-strong);
 }
 
 .emptyLink:hover {
@@ -305,7 +305,7 @@
 .dialogTitle {
   margin-right: 24px;
   font-size: 32px;
-  font-weight: 700;
+  font-weight: var(--font-weight-ui-strong);
   line-height: 1.2;
   letter-spacing: -0.025em;
 }
@@ -321,7 +321,7 @@
   display: block;
   margin-top: 24px;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: var(--font-weight-ui-strong);
 }
 
 .dialogInput {

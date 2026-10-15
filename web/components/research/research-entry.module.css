@@ -71,7 +71,7 @@
 .title {
   margin: 0;
   font-size: 96px;
-  font-weight: 700;
+  font-weight: var(--font-weight-ui-strong);
   line-height: 1;
   letter-spacing: -0.04em;
   overflow-wrap: break-word;
@@ -103,7 +103,7 @@
   background: var(--color-page);
   color: var(--color-text);
   font-size: 14px;
-  font-weight: 400;
+  font-weight: var(--font-weight-ui-regular);
   line-height: 1.6;
 }
 
@@ -157,7 +157,7 @@
   background: var(--color-primary);
   color: var(--color-primary-foreground);
   font-size: 14px;
-  font-weight: 700;
+  font-weight: var(--font-weight-ui-strong);
   line-height: 1.25;
   text-align: left;
   cursor: pointer;
@@ -192,7 +192,7 @@
   min-height: 44px;
   padding-block: 12px;
   font-size: 12px;
-  font-weight: 400;
+  font-weight: var(--font-weight-ui-regular);
   cursor: pointer;
 }
 
@@ -216,7 +216,7 @@
 .tips h2 {
   margin: 0 0 24px;
   font-size: 24px;
-  font-weight: 700;
+  font-weight: var(--font-weight-ui-strong);
   line-height: 1.2;
   letter-spacing: -0.02em;
   white-space: pre-line;
@@ -247,7 +247,7 @@
   grid-column: 1 / -1;
   margin: 0;
   font-size: 64px;
-  font-weight: 700;
+  font-weight: var(--font-weight-ui-strong);
   line-height: 1.05;
   letter-spacing: -0.04em;
   overflow-wrap: anywhere;

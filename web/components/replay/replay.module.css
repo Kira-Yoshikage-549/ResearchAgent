@@ -21,7 +21,7 @@
   color: var(--color-text);
   font-family: var(--font-ui);
   font-size: 22px;
-  font-weight: 700;
+  font-weight: var(--font-weight-ui-strong);
 }
 
 .header p {
@@ -65,7 +65,7 @@
 .speeds button[aria-pressed="true"] {
   background: var(--color-surface);
   color: var(--color-primary-hover);
-  font-weight: 700;
+  font-weight: var(--font-weight-ui-strong);
   border-bottom: 1px solid var(--color-primary);
 }
 
@@ -112,7 +112,7 @@
 .stage span {
   display: block;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: var(--font-weight-ui-strong);
   line-height: 1.6;
   overflow-wrap: anywhere;
 }
@@ -232,7 +232,7 @@
 .inspectorHeader h3 {
   color: var(--color-text);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: var(--font-weight-ui-strong);
   overflow-wrap: anywhere;
 }
 

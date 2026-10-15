@@ -48,8 +48,11 @@
   --workspace-action-hover: var(--swiss-black);
   --workspace-action-active: var(--swiss-black);
   --font-ui:
-    Inter, "Research Agent Han", "PingFang SC", "Microsoft YaHei", sans-serif;
+    Inter, "Chiron Hei HK Variable", "PingFang SC", "Microsoft YaHei",
+    sans-serif;
   --font-report: var(--font-ui);
+  --font-weight-ui-regular: 400;
+  --font-weight-ui-strong: 700;
   --swiss-margin: 48px;
   --swiss-gutter: 24px;
   --space-1: 4px;
@@ -68,6 +71,12 @@
   --motion-fast: 120ms;
   --motion-panel: 120ms;
 }
+/* Keep Chinese lighter while preserving the existing hierarchy and layout. */
+:root:lang(zh) {
+  --font-weight-ui-regular: 350;
+  --font-weight-ui-strong: 600;
+}
+
 @media (prefers-reduced-motion: reduce) {
   :root {
     --motion-fast: 0ms;

@@ -1,7 +1,8 @@
 # Source Han Sans CN · 思源黑体
 
-The Chinese UI uses the user-selected **A: Source Han Sans** with regular
-(400) and bold (700) faces. Latin text continues to use Inter.
+These retained Source Han Sans regular (400) and bold (700) files are legacy
+assets. The active Chinese UI uses Chiron Hei HK from Fontsource; Latin text
+continues to use Inter.
 
 Source: Adobe's official [Source Han Sans repository](https://github.com/adobe-fonts/source-han-sans),
 release branch, `SubsetOTF/CN/SourceHanSansCN-Regular.otf` and

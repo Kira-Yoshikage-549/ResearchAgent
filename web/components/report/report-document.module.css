@@ -4,14 +4,14 @@
   color: var(--color-text);
   font-family: var(--font-ui);
   font-size: 14px;
-  font-weight: 400;
+  font-weight: var(--font-weight-ui-regular);
   line-height: 1.9;
   overflow-wrap: anywhere;
 }
 
 .document :is(h1, h2, h3, h4, h5, h6) {
   font-family: var(--font-ui);
-  font-weight: 700;
+  font-weight: var(--font-weight-ui-strong);
   line-height: 1.4;
   scroll-margin-block-start: 16px;
 }
@@ -116,7 +116,7 @@
   text-align: start;
 }
 .document th {
-  font-weight: 700;
+  font-weight: var(--font-weight-ui-strong);
   background: var(--color-surface-subtle);
 }
 .document thead tr:last-child th {

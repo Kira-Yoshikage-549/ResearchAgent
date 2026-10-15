@@ -17,14 +17,17 @@
   font-display: swap;
 }
 .entry-pixel {
-  font-family: "Silkscreen", "Microsoft YaHei", sans-serif;
+  font-family:
+    "Silkscreen", "Chiron Hei HK Variable", "Microsoft YaHei", sans-serif;
   font-weight: 400;
 }
 .entry-serif {
-  font-family: "Cormorant Garamond", "Songti SC", "SimSun", serif;
+  font-family:
+    "Cormorant Garamond", "Chiron Hei HK Variable", "Songti SC", "SimSun", serif;
   font-weight: 300;
 }
 .entry-rounded {
-  font-family: "Quicksand", "Microsoft YaHei", sans-serif;
+  font-family:
+    "Quicksand", "Chiron Hei HK Variable", "Microsoft YaHei", sans-serif;
   letter-spacing: normal;
 }

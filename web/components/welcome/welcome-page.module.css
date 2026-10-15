@@ -68,7 +68,7 @@
   align-self: start;
   margin: 72px 0 0;
   font-size: 144px;
-  font-weight: 700;
+  font-weight: var(--font-weight-ui-strong);
   line-height: 0.95;
   letter-spacing: -0.04em;
 }
@@ -118,7 +118,7 @@
   color: var(--color-primary-foreground);
   text-align: left;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: var(--font-weight-ui-strong);
   cursor: pointer;
 }
 

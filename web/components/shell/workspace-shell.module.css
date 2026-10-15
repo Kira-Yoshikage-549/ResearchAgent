@@ -160,7 +160,7 @@
   min-width: 0;
   font-family: var(--font-ui);
   font-size: 18px;
-  font-weight: 700;
+  font-weight: var(--font-weight-ui-strong);
   line-height: 1.1;
 }
 
@@ -197,7 +197,7 @@
   padding-block: 12px;
   color: var(--color-text);
   font-size: 14px;
-  font-weight: 400;
+  font-weight: var(--font-weight-ui-regular);
 }
 .navLink:hover,
 .taskLink:hover {
@@ -211,7 +211,7 @@
 .groupLabel {
   color: var(--color-text);
   font-size: 12px;
-  font-weight: 400;
+  font-weight: var(--font-weight-ui-regular);
 }
 .taskLink {
   display: block;
@@ -224,7 +224,7 @@
 }
 .taskLink[aria-current="page"] {
   color: var(--color-primary);
-  font-weight: 700;
+  font-weight: var(--font-weight-ui-strong);
 }
 .footer {
   border-top: 1px solid var(--color-border);
@@ -253,7 +253,7 @@
 }
 .contextHeader h2 {
   font-size: 14px;
-  font-weight: 700;
+  font-weight: var(--font-weight-ui-strong);
 }
 .contextTabs {
   display: grid;

@@ -15,21 +15,6 @@
   font-style: normal;
   font-display: swap;
 }
-@font-face {
-  font-family: "Research Agent Han";
-  src: url("/fonts/source-han-sans/ResearchAgentHan-Regular.woff2")
-    format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Research Agent Han";
-  src: url("/fonts/source-han-sans/ResearchAgentHan-Bold.woff2") format("woff2");
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
 :root {
   --background: var(--color-page);
   --foreground: var(--color-text);
@@ -39,11 +24,13 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-ui);
   --font-mono: var(--font-ui);
-  --font-weight-light: 400;
-  --font-weight-medium: 400;
-  --font-weight-semibold: 700;
-  --font-weight-extrabold: 700;
-  --font-weight-black: 700;
+  --font-weight-light: var(--font-weight-ui-regular);
+  --font-weight-normal: var(--font-weight-ui-regular);
+  --font-weight-medium: var(--font-weight-ui-regular);
+  --font-weight-semibold: var(--font-weight-ui-strong);
+  --font-weight-bold: var(--font-weight-ui-strong);
+  --font-weight-extrabold: var(--font-weight-ui-strong);
+  --font-weight-black: var(--font-weight-ui-strong);
 }
 html {
   background: var(--background);
@@ -56,7 +43,7 @@ body {
   color: var(--foreground);
   font-family: var(--font-ui);
   font-size: 14px;
-  font-weight: 400;
+  font-weight: var(--font-weight-ui-regular);
   line-height: 1.5;
   text-align: left;
   font-synthesis: none;
@@ -68,6 +55,10 @@ textarea,
 select {
   font: inherit;
   text-align: left;
+}
+b,
+strong {
+  font-weight: var(--font-weight-ui-strong);
 }
 input,
 textarea {
@@ -120,7 +111,7 @@ code {
   flex-wrap: wrap;
   gap: 24px;
   font-size: 12px;
-  font-weight: 400;
+  font-weight: var(--font-weight-ui-regular);
   line-height: 1.5;
   font-variant-numeric: tabular-nums;
 }

@@ -51,7 +51,7 @@
   min-height: 24px;
   color: var(--color-text);
   font-size: 20px;
-  font-weight: 700;
+  font-weight: var(--font-weight-ui-strong);
   font-variant-numeric: tabular-nums;
 }
 .stage[data-status="running"],
@@ -66,7 +66,7 @@
   border-color: var(--color-primary);
 }
 .stageName {
-  font-weight: 700;
+  font-weight: var(--font-weight-ui-strong);
   overflow-wrap: anywhere;
 }
 .stageStatus,
@@ -82,7 +82,7 @@
   margin: 0 0 12px;
   font-family: var(--font-ui);
   font-size: 24px;
-  font-weight: 700;
+  font-weight: var(--font-weight-ui-strong);
   line-height: 1.2;
 }
 .currentStage p {
@@ -107,7 +107,7 @@
   margin-bottom: 12px;
   font-family: var(--font-ui);
   font-size: 24px;
-  font-weight: 700;
+  font-weight: var(--font-weight-ui-strong);
 }
 .plan p {
   max-width: 65ch;
@@ -167,7 +167,7 @@
   margin: 0 0 12px;
   color: var(--color-text);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: var(--font-weight-ui-strong);
 }
 .messageText {
   max-width: 75ch;
@@ -258,7 +258,7 @@
   margin: 0 0 32px;
   font-family: var(--font-ui);
   font-size: 64px;
-  font-weight: 700;
+  font-weight: var(--font-weight-ui-strong);
   line-height: 1;
   letter-spacing: -0.03em;
   overflow-wrap: anywhere;
@@ -343,7 +343,7 @@
 .pendingStatus {
   color: var(--color-primary);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: var(--font-weight-ui-strong);
 }
 .pendingText {
   max-height: 80px;
@@ -361,7 +361,7 @@
 .recovery h2 {
   font-family: var(--font-ui);
   font-size: 32px;
-  font-weight: 700;
+  font-weight: var(--font-weight-ui-strong);
   line-height: 1.1;
 }
 .recovery p {

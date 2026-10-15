@@ -10,7 +10,7 @@
   grid-column: 1 / 9;
   margin-bottom: 32px;
   font-size: 144px;
-  font-weight: 700;
+  font-weight: var(--font-weight-ui-strong);
   line-height: 0.9;
   letter-spacing: -0.04em;
 }
@@ -18,7 +18,7 @@
 .title {
   grid-column: 1 / 9;
   font-size: 96px;
-  font-weight: 700;
+  font-weight: var(--font-weight-ui-strong);
   line-height: 0.95;
   letter-spacing: -0.04em;
   overflow-wrap: anywhere;

@@ -6,6 +6,10 @@ import { expectSwissEntry, mockEntryBackend } from "./three-page-helpers";
 test.use({ viewport: { width: 1366, height: 768 } });
 
 for (const locale of ["en", "zh-CN"] as const) {
+  const expectedWeights =
+    locale === "zh-CN"
+      ? { body: "350", strong: "600" }
+      : { body: "400", strong: "700" };
   test(`Swiss entry composition and local typography at 1366 × 768 (${locale})`, async ({
     page,
   }) => {
@@ -61,7 +65,7 @@ for (const locale of ["en", "zh-CN"] as const) {
         "font-size",
         name === "welcome" ? "144px" : "96px",
       );
-      await expect(heading).toHaveCSS("font-weight", "700");
+      await expect(heading).toHaveCSS("font-weight", expectedWeights.strong);
       await expect(heading).toHaveCSS("text-align", "left");
       const weights = await page
         .locator("main")
@@ -74,7 +78,9 @@ for (const locale of ["en", "zh-CN"] as const) {
         );
       expect(
         [...new Set(weights)].every(
-          (weight) => weight === "400" || weight === "700",
+          (weight) =>
+            weight === expectedWeights.body ||
+            weight === expectedWeights.strong,
         ),
       ).toBe(true);
       if (name === "question") {

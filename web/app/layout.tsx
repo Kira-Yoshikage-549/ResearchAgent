@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getLocale } from "next-intl/server";
+import "@fontsource-variable/chiron-hei-hk/wght.css";
 import "./globals.css";
 
 import { Providers } from "@/app/providers";
